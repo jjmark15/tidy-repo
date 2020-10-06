@@ -1,14 +1,6 @@
 use crate::application::RepositoryUrlDto;
 
+#[cfg_attr(test, mockall::automock)]
 pub trait RepositoryClient {
     fn count_branches(&self, repository_url: &RepositoryUrlDto) -> u32;
-}
-
-#[cfg(test)]
-mockall::mock! {
-    pub RepositoryClient {}
-
-    pub trait RepositoryClient {
-        fn count_branches(&self, repository_url: &RepositoryUrlDto) -> u32;
-    }
 }
