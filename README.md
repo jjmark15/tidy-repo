@@ -1,1 +1,1 @@
-# tidy-repo
+# Tidy Repo CLI
