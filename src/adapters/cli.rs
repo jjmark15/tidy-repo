@@ -1,3 +1,5 @@
+use crate::application::RepositoryUrlDto;
+
 pub trait ClientOptions {
-    fn repository_urls(&self) -> &Vec<String>;
+    fn repository_urls(&self) -> &Vec<RepositoryUrlDto>;
 }

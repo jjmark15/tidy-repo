@@ -1,6 +1,7 @@
 use crate::adapters::cli::ClientOptions;
 
 mod adapters;
+pub mod application;
 mod domain;
 pub mod ports;
 
