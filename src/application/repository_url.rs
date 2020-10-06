@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 use std::str::FromStr;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct RepositoryUrlDto(String);
 
 impl RepositoryUrlDto {
