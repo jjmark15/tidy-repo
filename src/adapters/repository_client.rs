@@ -1,6 +1,21 @@
-use crate::application::RepositoryUrlDto;
+use std::error::Error;
 
-#[cfg_attr(test, mockall::automock)]
+use async_trait::async_trait;
+
+use crate::application::{BranchNameDto, RepositoryUrlDto};
+
+#[cfg_attr(test, mockall::automock(type Err=TestRepositoryClientError;))]
+#[async_trait]
 pub trait RepositoryClient {
-    fn count_branches(&self, repository_url: &RepositoryUrlDto) -> u32;
+    type Err: Error;
+
+    async fn list_branches(
+        &self,
+        repository_url: &RepositoryUrlDto,
+    ) -> Result<Vec<BranchNameDto>, Self::Err>;
 }
+
+#[cfg(test)]
+#[derive(Debug, thiserror::Error)]
+#[error("Repository client error occurred")]
+pub struct TestRepositoryClientError;

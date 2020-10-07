@@ -1,5 +1,8 @@
 use std::convert::Infallible;
+use std::fmt::Display;
 use std::str::FromStr;
+
+use serde::export::Formatter;
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct RepositoryUrlDto(String);
@@ -22,6 +25,12 @@ impl FromStr for RepositoryUrlDto {
     }
 }
 
+impl Display for RepositoryUrlDto {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use spectral::prelude::*;
@@ -41,5 +50,12 @@ mod tests {
     fn implements_from_string_infallibly() {
         assert_that(&RepositoryUrlDto::from_str(&"url".to_string()).unwrap())
             .is_equal_to(&RepositoryUrlDto::new("url".to_string()));
+    }
+
+    #[test]
+    fn to_string_equals_contained_string_url() {
+        let under_test = RepositoryUrlDto::new("https://github.com/owner/repo".to_string());
+        assert_that(&under_test.to_string())
+            .is_equal_to(&"https://github.com/owner/repo".to_string())
     }
 }
