@@ -9,12 +9,12 @@ pub trait GitHubRepositoryUrlParser {
     fn parse(&self, url: RepositoryUrlDto) -> Result<GitHubRepository, RepositoryUrlParseError>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GitHubRepositoryUrlParserImpl;
 
 impl GitHubRepositoryUrlParserImpl {
     pub fn new() -> Self {
-        GitHubRepositoryUrlParserImpl
+        GitHubRepositoryUrlParserImpl::default()
     }
 }
 
@@ -30,19 +30,18 @@ impl TryFrom<RepositoryUrlDto> for GitHubRepository {
     fn try_from(url: RepositoryUrlDto) -> Result<Self, Self::Error> {
         let re = Regex::new(r"(?:https?://)?github\.com/(?P<owner>\S+)/(?P<name>\S+)").unwrap();
 
-        match re.captures(url.value()) {
-            Some(captures) => match captures.name("owner") {
-                Some(owner_match) => match captures.name("name") {
-                    Some(name_match) => Ok(GitHubRepository::new(
-                        owner_match.as_str().to_string(),
-                        name_match.as_str().to_string(),
-                    )),
-                    _ => Err(RepositoryUrlParseError(url.value().clone())),
-                },
-                _ => Err(RepositoryUrlParseError(url.value().clone())),
-            },
-            _ => Err(RepositoryUrlParseError(url.value().clone())),
+        if let Some(captures) = re.captures(url.value()) {
+            if let Some(owner) = captures.name("owner") {
+                if let Some(name) = captures.name("name") {
+                    return Ok(GitHubRepository::new(
+                        owner.as_str().to_string(),
+                        name.as_str().to_string(),
+                    ));
+                }
+            }
         }
+
+        Err(RepositoryUrlParseError(url.value().clone()))
     }
 }
 
