@@ -1,4 +1,5 @@
 use crate::common::test_command;
+use crate::count_branches::count_results_with_header;
 
 #[test]
 fn returns_empty_results_when_not_passed_any_repository_urls() {
@@ -6,5 +7,5 @@ fn returns_empty_results_when_not_passed_any_repository_urls() {
 
     let assert = cmd.assert();
 
-    assert.success().stdout("\n");
+    assert.success().stdout(count_results_with_header("\n"));
 }

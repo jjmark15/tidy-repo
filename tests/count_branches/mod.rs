@@ -22,3 +22,7 @@ pub(crate) fn mock_github_api_server_for_successful_list_branches(
     .with_status(200)
     .create()
 }
+
+pub(crate) fn count_results_with_header<S: AsRef<str>>(count_results: S) -> String {
+    format!("# Repository Branch Counts\n\n{}", count_results.as_ref())
+}

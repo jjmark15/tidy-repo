@@ -19,7 +19,7 @@ impl Display for CountBranchesResult {
             .collect::<Vec<String>>();
         lines.sort();
 
-        write!(f, "{}", lines.join("\n"))
+        write!(f, "# Repository Branch Counts\n\n{}", lines.join("\n"))
     }
 }
 
@@ -52,7 +52,8 @@ mod tests {
         let mut hash_map = HashMap::new();
         hash_map.insert("url", 1);
         let under_test = count_branches_result(hash_map);
-        assert_that(&under_test.to_string()).is_equal_to(&"url: 1".to_string());
+        assert_that(&under_test.to_string())
+            .is_equal_to(&"# Repository Branch Counts\n\nurl: 1".to_string());
     }
 
     #[test]
@@ -61,6 +62,7 @@ mod tests {
         hash_map.insert("url", 1);
         hash_map.insert("other_url", 0);
         let under_test = count_branches_result(hash_map);
-        assert_that(&under_test.to_string()).is_equal_to(&"other_url: 0\nurl: 1".to_string());
+        assert_that(&under_test.to_string())
+            .is_equal_to(&"# Repository Branch Counts\n\nother_url: 0\nurl: 1".to_string());
     }
 }
