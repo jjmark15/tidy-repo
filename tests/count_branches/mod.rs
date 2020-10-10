@@ -3,9 +3,9 @@ use http_types::Method;
 
 mod counts_branches_in_multiple_github_repositories;
 mod counts_branches_in_single_github_repository;
-mod errors_when_passed_a_repository_url_that_does_not_exist;
-mod errors_when_passed_repository_url_missing_owner;
-mod errors_when_passed_repository_url_missing_repo_name;
+mod fails_when_passed_a_repository_url_that_does_not_exist;
+mod fails_when_passed_repository_url_missing_owner;
+mod fails_when_passed_repository_url_missing_repo_name;
 mod returns_empty_results_when_not_passed_any_repository_urls;
 
 pub(crate) fn mock_github_api_server_for_successful_list_branches(

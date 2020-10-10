@@ -1,7 +1,7 @@
 use crate::common::test_command;
 
 #[test]
-fn errors_when_passed_repository_url_missing_owner() {
+fn fails_when_passed_repository_url_missing_owner() {
     let mut cmd = test_command();
 
     let assert = cmd.arg("https://github.com//repo").assert();
