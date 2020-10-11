@@ -8,5 +8,5 @@ fn fails_when_passed_repository_url_missing_owner() {
 
     assert
         .failure()
-        .stderr("Error: failed to parse repository from https://github.com//repo\n");
+        .stderr("Error: failed to parse repository from 'https://github.com//repo'\n");
 }

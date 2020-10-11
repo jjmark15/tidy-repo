@@ -28,7 +28,7 @@ impl TryFrom<RepositoryUrlDto> for GitHubRepository {
     type Error = RepositoryUrlParseError;
 
     fn try_from(url: RepositoryUrlDto) -> Result<Self, Self::Error> {
-        let re = Regex::new(r"(?:https?://)?github\.com/(?P<owner>\S+)/(?P<name>\S+)").unwrap();
+        let re = Regex::new(r"^(?:https?://)?github\.com/(?P<owner>\S+)/(?P<name>\S+)$").unwrap();
 
         if let Some(captures) = re.captures(url.value()) {
             if let Some(owner) = captures.name("owner") {
@@ -46,7 +46,7 @@ impl TryFrom<RepositoryUrlDto> for GitHubRepository {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("failed to parse repository from {0}")]
+#[error("failed to parse repository from '{0}'")]
 pub struct RepositoryUrlParseError(String);
 
 #[cfg(test)]
@@ -95,6 +95,13 @@ mod tests {
     #[test]
     fn fails_to_parse_github_repository_url_missing_repo_name() {
         let url = RepositoryUrlDto::new("https://github.com/owner".to_string());
+        let under_test = GitHubRepositoryUrlParserImpl::new();
+        assert_that(&under_test.parse(url)).is_err();
+    }
+
+    #[test]
+    fn fails_to_parse_github_repository_url_with_non_github_base_url() {
+        let url = RepositoryUrlDto::new("https://not-github.com/owner/repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         assert_that(&under_test.parse(url)).is_err();
     }

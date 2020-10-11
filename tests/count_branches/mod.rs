@@ -3,6 +3,7 @@ use http_types::Method;
 
 mod counts_branches_in_multiple_github_repositories;
 mod counts_branches_in_single_github_repository;
+mod fails_when_passed_a_malformed_repository_url;
 mod fails_when_passed_a_repository_url_that_does_not_exist;
 mod fails_when_passed_repository_url_missing_owner;
 mod fails_when_passed_repository_url_missing_repo_name;
