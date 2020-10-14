@@ -9,7 +9,10 @@ fn fails_when_passed_repository_url_that_does_not_exist() {
     let _mock = mock_github_api_server_for_repository_not_found("owner", "repo", body_string);
     let mut cmd = test_command();
 
-    let assert = cmd.arg("https://github.com/owner/repo").assert();
+    let assert = cmd
+        .arg("branches")
+        .arg("https://github.com/owner/repo")
+        .assert();
 
     assert
         .failure()

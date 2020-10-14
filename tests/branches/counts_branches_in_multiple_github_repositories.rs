@@ -1,5 +1,5 @@
+use crate::branches::count_results_with_header;
 use crate::common::test_command;
-use crate::count_branches::count_results_with_header;
 
 use super::mock_github_api_server_for_successful_list_branches;
 
@@ -14,6 +14,7 @@ fn counts_branches_in_multiple_github_repositories() {
     let mut cmd = test_command();
 
     let assert = cmd
+        .arg("branches")
         .arg("https://github.com/owner/repo1")
         .arg("https://github.com/owner/repo2")
         .assert();
