@@ -4,9 +4,9 @@ use async_trait::async_trait;
 
 use crate::application::{BranchNameDto, RepositoryUrlDto};
 
-#[cfg_attr(test, mockall::automock(type Err=TestRepositoryClientError;))]
+#[cfg_attr(test, mockall::automock(type Err=TestRepositoryHostError;))]
 #[async_trait]
-pub trait RepositoryClient {
+pub trait RepositoryHost {
     type Err: Error;
 
     async fn list_branches(
@@ -18,4 +18,4 @@ pub trait RepositoryClient {
 #[cfg(test)]
 #[derive(Debug, thiserror::Error)]
 #[error("Repository client error occurred")]
-pub struct TestRepositoryClientError;
+pub struct TestRepositoryHostError;

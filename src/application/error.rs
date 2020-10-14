@@ -1,18 +1,18 @@
 #[cfg(test)]
-use crate::ports::repository_client::adapters::TestRepositoryClientError;
-use crate::ports::repository_client::github::GithubRepositoryClientError;
+use crate::ports::repository_hosting::adapters::TestRepositoryHostError;
+use crate::ports::repository_hosting::github::GithubClientError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApplicationError {
     #[error(transparent)]
-    RepositoryClientError(#[from] RepositoryClientError),
+    RepositoryClientError(#[from] RepositoryHostError),
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum RepositoryClientError {
+pub enum RepositoryHostError {
     #[error(transparent)]
-    GithubRepositoryClientError(#[from] GithubRepositoryClientError),
+    GithubRepositoryClientError(#[from] GithubClientError),
     #[cfg(test)]
     #[error(transparent)]
-    TestRepositoryClientError(#[from] TestRepositoryClientError),
+    TestRepositoryClientError(#[from] TestRepositoryHostError),
 }

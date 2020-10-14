@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 
-use crate::application::{
-    ApplicationError, BranchNameDto, RepositoryClientError, RepositoryUrlDto,
-};
-use crate::ports::repository_client::adapters::RepositoryClient;
+use crate::application::{ApplicationError, BranchNameDto, RepositoryHostError, RepositoryUrlDto};
+use crate::ports::repository_hosting::adapters::RepositoryHost;
 
-pub struct ApplicationService<RepoClient: RepositoryClient> {
-    repository_client: RepoClient,
+pub struct ApplicationService<RepoHost: RepositoryHost> {
+    repository_host: RepoHost,
 }
 
-impl<RepoClient> ApplicationService<RepoClient>
+impl<RepoHost> ApplicationService<RepoHost>
 where
-    RepoClient: RepositoryClient,
-    <RepoClient as RepositoryClient>::Err: Into<RepositoryClientError>,
+    RepoHost: RepositoryHost,
+    <RepoHost as RepositoryHost>::Err: Into<RepositoryHostError>,
 {
     pub async fn count_branches_in_repositories(
         &self,
@@ -22,24 +20,24 @@ where
 
         for url in repository_urls {
             let branches: Vec<BranchNameDto> =
-                Self::list_branches(&self.repository_client, &url).await?;
+                Self::list_branches(&self.repository_host, &url).await?;
             hash_map.insert(url.clone(), branches.len() as u32);
         }
         Ok(hash_map)
     }
 
     async fn list_branches(
-        repository_client: &RepoClient,
+        repository_host: &RepoHost,
         repository_url: &RepositoryUrlDto,
-    ) -> Result<Vec<BranchNameDto>, RepositoryClientError> {
-        match repository_client.list_branches(repository_url).await {
+    ) -> Result<Vec<BranchNameDto>, RepositoryHostError> {
+        match repository_host.list_branches(repository_url).await {
             Ok(branches) => Ok(branches),
             Err(e) => Err(e.into()),
         }
     }
 
-    pub fn new(repository_client: RepoClient) -> Self {
-        ApplicationService { repository_client }
+    pub fn new(repository_host: RepoHost) -> Self {
+        ApplicationService { repository_host }
     }
 }
 
@@ -49,7 +47,7 @@ mod tests {
     use spectral::prelude::*;
 
     use crate::application::BranchNameDto;
-    use crate::ports::repository_client::adapters::MockRepositoryClient;
+    use crate::ports::repository_hosting::adapters::MockRepositoryHost;
 
     use super::*;
 
@@ -61,32 +59,32 @@ mod tests {
         hash_map
     }
 
-    fn prepare_mock_repository_client(
-        mock_repository_client: &mut MockRepositoryClient,
+    fn prepare_mock_repository_host(
+        mock_repository_host: &mut MockRepositoryHost,
         url: RepositoryUrlDto,
         branches: Vec<BranchNameDto>,
     ) {
-        mock_repository_client
+        mock_repository_host
             .expect_list_branches()
             .with(eq(url))
             .returning(move |_| Ok(branches.clone()));
     }
 
-    fn mock_repository_client() -> MockRepositoryClient {
+    fn mock_repository_host() -> MockRepositoryHost {
         let repository_url_1 = RepositoryUrlDto::new("1".to_string());
         let repository_url_2 = RepositoryUrlDto::new("2".to_string());
-        let mut mock_repository_client = MockRepositoryClient::default();
-        prepare_mock_repository_client(
-            &mut mock_repository_client,
+        let mut mock_repository_host = MockRepositoryHost::default();
+        prepare_mock_repository_host(
+            &mut mock_repository_host,
             repository_url_1,
             to_branch_names(vec!["1"]),
         );
-        prepare_mock_repository_client(
-            &mut mock_repository_client,
+        prepare_mock_repository_host(
+            &mut mock_repository_host,
             repository_url_2,
             to_branch_names(vec!["1", "2"]),
         );
-        mock_repository_client
+        mock_repository_host
     }
 
     fn to_branch_names(branch_name_strings: Vec<&str>) -> Vec<BranchNameDto> {
@@ -103,18 +101,16 @@ mod tests {
             .collect()
     }
 
-    fn under_test(
-        repository_client: MockRepositoryClient,
-    ) -> ApplicationService<MockRepositoryClient> {
-        ApplicationService::new(repository_client)
+    fn under_test(repository_host: MockRepositoryHost) -> ApplicationService<MockRepositoryHost> {
+        ApplicationService::new(repository_host)
     }
 
     #[async_std::test]
     async fn counts_branches_in_list_of_repositories() {
-        let mock_repository_client = mock_repository_client();
+        let mock_repository_host = mock_repository_host();
 
         assert_that(
-            &under_test(mock_repository_client)
+            &under_test(mock_repository_host)
                 .count_branches_in_repositories(to_urls(vec!["1", "2"]))
                 .await
                 .unwrap(),

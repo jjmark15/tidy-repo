@@ -1,8 +1,8 @@
 use crate::application::RepositoryUrlDto;
-use crate::ports::repository_client::github::parse_repository_url::RepositoryUrlParseError;
+use crate::ports::repository_hosting::github::parse_repository_url::RepositoryUrlParseError;
 
 #[derive(Debug, thiserror::Error)]
-pub enum GithubRepositoryClientError {
+pub enum GithubClientError {
     #[error(transparent)]
     RepositoryUrlParseError(#[from] RepositoryUrlParseError),
     #[error(transparent)]

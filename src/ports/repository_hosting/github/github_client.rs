@@ -5,15 +5,15 @@ use http_types::headers::HeaderName;
 use http_types::{Method, Url};
 
 use crate::application::{BranchNameDto, RepositoryUrlDto};
-use crate::ports::repository_client::adapters::RepositoryClient;
-use crate::ports::repository_client::github::parse_repository_url::GitHubRepositoryUrlParser;
-use crate::ports::repository_client::github::responses::ListBranchesResponseBody;
-use crate::ports::repository_client::github::GithubRepositoryClientError;
+use crate::ports::repository_hosting::adapters::RepositoryHost;
+use crate::ports::repository_hosting::github::parse_repository_url::GitHubRepositoryUrlParser;
+use crate::ports::repository_hosting::github::responses::ListBranchesResponseBody;
+use crate::ports::repository_hosting::github::GithubClientError;
 use crate::utils::environment::EnvironmentReader;
 use crate::utils::http::{HttpClientFacade, Request};
 
 #[derive(Debug)]
-pub struct GitHubRepositoryClient<
+pub struct GitHubClient<
     HttpClient: HttpClientFacade,
     UrlParser: GitHubRepositoryUrlParser,
     EnvReader: EnvironmentReader,
@@ -23,7 +23,7 @@ pub struct GitHubRepositoryClient<
     environment_reader: EnvReader,
 }
 
-impl<HttpClient, UrlParser, EnvReader> GitHubRepositoryClient<HttpClient, UrlParser, EnvReader>
+impl<HttpClient, UrlParser, EnvReader> GitHubClient<HttpClient, UrlParser, EnvReader>
 where
     HttpClient: HttpClientFacade,
     UrlParser: GitHubRepositoryUrlParser,
@@ -34,7 +34,7 @@ where
         url_parser: UrlParser,
         environment_reader: EnvReader,
     ) -> Self {
-        GitHubRepositoryClient {
+        GitHubClient {
             http_client,
             url_parser,
             environment_reader,
@@ -50,10 +50,10 @@ where
         headers
     }
 
-    fn parse_url(url_string: String) -> Result<Url, GithubRepositoryClientError> {
+    fn parse_url(url_string: String) -> Result<Url, GithubClientError> {
         match Url::parse(url_string.as_str()) {
             Ok(url) => Ok(url),
-            Err(err) => Err(GithubRepositoryClientError::ApiUrlParseError(err)),
+            Err(err) => Err(GithubClientError::ApiUrlParseError(err)),
         }
     }
 
@@ -67,25 +67,21 @@ where
         }
     }
 
-    fn list_branches_api_url(
-        &self,
-        owner: &str,
-        repo: &str,
-    ) -> Result<Url, GithubRepositoryClientError> {
+    fn list_branches_api_url(&self, owner: &str, repo: &str) -> Result<Url, GithubClientError> {
         let url_string = format!("{}/repos/{}/{}/branches", self.api_base_url(), owner, repo);
         Self::parse_url(url_string)
     }
 }
 
 #[async_trait]
-impl<HttpClient, UrlParser, EnvReader> RepositoryClient
-    for GitHubRepositoryClient<HttpClient, UrlParser, EnvReader>
+impl<HttpClient, UrlParser, EnvReader> RepositoryHost
+    for GitHubClient<HttpClient, UrlParser, EnvReader>
 where
     HttpClient: HttpClientFacade + Send + Sync,
     UrlParser: GitHubRepositoryUrlParser + Send + Sync,
     EnvReader: EnvironmentReader + Send + Sync,
 {
-    type Err = GithubRepositoryClientError;
+    type Err = GithubClientError;
 
     async fn list_branches(
         &self,
@@ -107,7 +103,7 @@ where
                 .iter()
                 .map(|branch| BranchNameDto::new(branch.name().to_string()))
                 .collect()),
-            _ => Err(GithubRepositoryClientError::RepositoryNotFound(
+            _ => Err(GithubClientError::RepositoryNotFound(
                 repository_url.clone(),
             )),
         }
@@ -123,9 +119,9 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::ports::repository_client::github::parse_repository_url::MockGitHubRepositoryUrlParser;
-    use crate::ports::repository_client::github::repository::GitHubRepository;
-    use crate::ports::repository_client::github::responses::{Branch, ListBranchesResponseBody};
+    use crate::ports::repository_hosting::github::parse_repository_url::MockGitHubRepositoryUrlParser;
+    use crate::ports::repository_hosting::github::repository::GitHubRepository;
+    use crate::ports::repository_hosting::github::responses::{Branch, ListBranchesResponseBody};
     use crate::utils::environment::{EnvironmentReaderError, MockEnvironmentReader};
     use crate::utils::http::{Error, MockHttpClientFacade, Request, Response};
 
@@ -214,11 +210,8 @@ mod tests {
                 ))
             });
 
-        let under_test = GitHubRepositoryClient::new(
-            mock_http_client,
-            mock_url_parser,
-            mock_environment_reader(),
-        );
+        let under_test =
+            GitHubClient::new(mock_http_client, mock_url_parser, mock_environment_reader());
 
         assert_that(
             &under_test

@@ -2,8 +2,8 @@ use structopt::StructOpt;
 
 use tidy_repo::application::ApplicationService;
 use tidy_repo::ports::cli::structopt::StructOptClientOptions;
-use tidy_repo::ports::repository_client::github::{
-    GitHubRepositoryClient, GitHubRepositoryUrlParserImpl,
+use tidy_repo::ports::repository_hosting::github::{
+    GitHubClient, GitHubRepositoryUrlParserImpl,
 };
 use tidy_repo::utils::environment::EnvironmentReaderStd;
 use tidy_repo::utils::http::HttpClientFacadeImpl;
@@ -18,7 +18,7 @@ async fn main() {
 }
 
 fn application_service() -> ApplicationService<
-    GitHubRepositoryClient<
+    GitHubClient<
         HttpClientFacadeImpl,
         GitHubRepositoryUrlParserImpl,
         EnvironmentReaderStd,
@@ -26,7 +26,7 @@ fn application_service() -> ApplicationService<
 > {
     let http_client = HttpClientFacadeImpl::new(surf::client());
     let url_parser = GitHubRepositoryUrlParserImpl::new();
-    ApplicationService::new(GitHubRepositoryClient::new(
+    ApplicationService::new(GitHubClient::new(
         http_client,
         url_parser,
         EnvironmentReaderStd::new(),

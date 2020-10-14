@@ -1,7 +1,7 @@
 use std::convert::{TryFrom, TryInto};
 
 use crate::application::RepositoryUrlDto;
-use crate::ports::repository_client::github::repository::GitHubRepository;
+use crate::ports::repository_hosting::github::repository::GitHubRepository;
 use regex::Regex;
 
 #[cfg_attr(test, mockall::automock)]
