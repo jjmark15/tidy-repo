@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::adapters::repository_client::TestRepositoryClientError;
+use crate::ports::repository_client::adapters::TestRepositoryClientError;
 use crate::ports::repository_client::github::GithubRepositoryClientError;
 
 #[derive(Debug, thiserror::Error)]

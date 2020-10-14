@@ -1,7 +1,7 @@
 use structopt::StructOpt;
 
-use crate::adapters::cli::ClientOptions;
 use crate::application::RepositoryUrlDto;
+use crate::ports::cli::adapters::ClientOptions;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Tidy Repo")]

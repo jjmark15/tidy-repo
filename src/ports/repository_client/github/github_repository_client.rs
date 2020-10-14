@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use http_types::headers::HeaderName;
 use http_types::{Method, Url};
 
-use crate::adapters::repository_client::RepositoryClient;
 use crate::application::{BranchNameDto, RepositoryUrlDto};
+use crate::ports::repository_client::adapters::RepositoryClient;
 use crate::ports::repository_client::github::parse_repository_url::GitHubRepositoryUrlParser;
 use crate::ports::repository_client::github::responses::ListBranchesResponseBody;
 use crate::ports::repository_client::github::GithubRepositoryClientError;

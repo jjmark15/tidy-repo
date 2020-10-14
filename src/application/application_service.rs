@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::adapters::repository_client::RepositoryClient;
 use crate::application::{
     ApplicationError, BranchNameDto, RepositoryClientError, RepositoryUrlDto,
 };
+use crate::ports::repository_client::adapters::RepositoryClient;
 
 pub struct ApplicationService<RepoClient: RepositoryClient> {
     repository_client: RepoClient,
@@ -48,8 +48,8 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::adapters::repository_client::MockRepositoryClient;
     use crate::application::BranchNameDto;
+    use crate::ports::repository_client::adapters::MockRepositoryClient;
 
     use super::*;
 

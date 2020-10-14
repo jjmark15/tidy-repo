@@ -1,9 +1,9 @@
-use crate::adapters::cli::ClientOptions;
-use crate::adapters::repository_client::RepositoryClient;
+use ports::cli::adapters::ClientOptions;
+use ports::repository_client::adapters::RepositoryClient;
+
 use crate::application::{ApplicationService, RepositoryClientError};
 use crate::cli_results::CountBranchesResult;
 
-mod adapters;
 pub mod application;
 mod cli_results;
 mod domain;
