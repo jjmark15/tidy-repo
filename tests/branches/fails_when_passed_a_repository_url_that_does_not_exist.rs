@@ -1,16 +1,14 @@
 use http_types::headers::ACCEPT;
 use http_types::Method;
 
-use crate::common::test_command;
+use crate::branches::branches_command;
 
 #[test]
 fn fails_when_passed_repository_url_that_does_not_exist() {
     let body_string = "[{\"message\": \"Not Found\"}]";
     let _mock = mock_github_api_server_for_repository_not_found("owner", "repo", body_string);
-    let mut cmd = test_command();
 
-    let assert = cmd
-        .arg("branches")
+    let assert = branches_command()
         .arg("https://github.com/owner/repo")
         .assert();
 

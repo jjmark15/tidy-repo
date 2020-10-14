@@ -1,3 +1,5 @@
+use crate::common::test_command;
+use assert_cmd::Command;
 use http_types::headers::ACCEPT;
 use http_types::Method;
 
@@ -26,4 +28,10 @@ pub(crate) fn mock_github_api_server_for_successful_list_branches(
 
 pub(crate) fn count_results_with_header<S: AsRef<str>>(count_results: S) -> String {
     format!("# Repository Branch Counts\n\n{}", count_results.as_ref())
+}
+
+pub(crate) fn branches_command() -> Command {
+    let mut cmd = test_command();
+    cmd.arg("branches");
+    cmd
 }
