@@ -43,8 +43,9 @@ async fn response_from_surf_response(mut surf_response: surf::Response) -> Respo
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use spectral::prelude::*;
+
+    use super::*;
 
     #[test]
     fn returns_status_code() {

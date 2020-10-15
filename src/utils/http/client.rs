@@ -1,6 +1,7 @@
-use crate::utils::http::{Error, Request, Response};
 use async_trait::async_trait;
 use surf::Client;
+
+use crate::utils::http::{Error, Request, Response};
 
 #[async_trait]
 #[cfg_attr(test, mockall::automock)]

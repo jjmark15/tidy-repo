@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use crate::application::{BranchNameDto, RepositoryUrlDto};
 
-#[cfg_attr(test, mockall::automock(type Err=TestRepositoryHostError;))]
+#[cfg_attr(test, mockall::automock(type Err = TestRepositoryHostError;))]
 #[async_trait]
 pub trait RepositoryHost {
     type Err: Error;

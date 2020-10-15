@@ -13,8 +13,9 @@ impl BranchNameDto {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use spectral::prelude::*;
+
+    use super::*;
 
     #[test]
     fn returns_value() {

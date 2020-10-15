@@ -1,8 +1,9 @@
 use std::convert::{TryFrom, TryInto};
 
+use regex::Regex;
+
 use crate::application::RepositoryUrlDto;
 use crate::ports::repository_hosting::github::repository::GitHubRepository;
-use regex::Regex;
 
 #[cfg_attr(test, mockall::automock)]
 pub trait GitHubRepositoryUrlParser {

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use http_types::headers::HeaderName;
 use http_types::{Method, Url};
+use http_types::headers::HeaderName;
 
 use crate::application::{BranchNameDto, RepositoryUrlDto};
 use crate::ports::repository_hosting::adapters::RepositoryHost;
+use crate::ports::repository_hosting::github::GithubClientError;
 use crate::ports::repository_hosting::github::parse_repository_url::GitHubRepositoryUrlParser;
 use crate::ports::repository_hosting::github::responses::ListBranchesResponseBody;
-use crate::ports::repository_hosting::github::GithubClientError;
 use crate::utils::environment::EnvironmentReader;
 use crate::utils::http::{HttpClientFacade, Request};
 
@@ -24,10 +24,10 @@ pub struct GitHubClient<
 }
 
 impl<HttpClient, UrlParser, EnvReader> GitHubClient<HttpClient, UrlParser, EnvReader>
-where
-    HttpClient: HttpClientFacade,
-    UrlParser: GitHubRepositoryUrlParser,
-    EnvReader: EnvironmentReader,
+    where
+        HttpClient: HttpClientFacade,
+        UrlParser: GitHubRepositoryUrlParser,
+        EnvReader: EnvironmentReader,
 {
     pub fn new(
         http_client: HttpClient,
@@ -75,11 +75,11 @@ where
 
 #[async_trait]
 impl<HttpClient, UrlParser, EnvReader> RepositoryHost
-    for GitHubClient<HttpClient, UrlParser, EnvReader>
-where
-    HttpClient: HttpClientFacade + Send + Sync,
-    UrlParser: GitHubRepositoryUrlParser + Send + Sync,
-    EnvReader: EnvironmentReader + Send + Sync,
+for GitHubClient<HttpClient, UrlParser, EnvReader>
+    where
+        HttpClient: HttpClientFacade + Send + Sync,
+        UrlParser: GitHubRepositoryUrlParser + Send + Sync,
+        EnvReader: EnvironmentReader + Send + Sync,
 {
     type Err = GithubClientError;
 
@@ -221,6 +221,6 @@ mod tests {
                 .await
                 .unwrap(),
         )
-        .is_equal_to(&vec![BranchNameDto::new("branch".to_string())]);
+            .is_equal_to(&vec![BranchNameDto::new("branch".to_string())]);
     }
 }

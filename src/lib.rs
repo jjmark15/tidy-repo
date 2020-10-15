@@ -6,7 +6,6 @@ use crate::cli_results::CountBranchesResult;
 
 pub mod application;
 mod cli_results;
-mod domain;
 pub mod ports;
 pub mod utils;
 
