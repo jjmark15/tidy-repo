@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use async_trait::async_trait;
 
 use crate::application::{BranchNameDto, RepositoryUrlDto};
@@ -7,7 +5,7 @@ use crate::application::{BranchNameDto, RepositoryUrlDto};
 #[cfg_attr(test, mockall::automock(type Err = TestRepositoryHostError;))]
 #[async_trait]
 pub trait RepositoryHost {
-    type Err: Error;
+    type Err;
 
     async fn list_branches(
         &self,
