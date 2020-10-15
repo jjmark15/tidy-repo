@@ -23,9 +23,10 @@ impl HttpClientFacadeImpl {
 #[async_trait]
 impl HttpClientFacade for HttpClientFacadeImpl {
     async fn send(&self, req: Request) -> Result<Response, Error> {
-        match self.client.send(req).await {
-            Ok(surf_response) => Ok(surf_response.into()),
-            Err(err) => Err(err.into()),
-        }
+        self.client
+            .send(req)
+            .await
+            .map_err(|err| err.into())
+            .map(|response| response.into())
     }
 }

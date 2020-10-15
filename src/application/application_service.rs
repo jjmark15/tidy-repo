@@ -30,10 +30,10 @@ where
         repository_host: &RepoHost,
         repository_url: &RepositoryUrlDto,
     ) -> Result<Vec<BranchNameDto>, RepositoryHostError> {
-        match repository_host.list_branches(repository_url).await {
-            Ok(branches) => Ok(branches),
-            Err(e) => Err(e.into()),
-        }
+        repository_host
+            .list_branches(repository_url)
+            .await
+            .map_err(|err| err.into())
     }
 
     pub fn new(repository_host: RepoHost) -> Self {
