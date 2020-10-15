@@ -26,7 +26,7 @@ impl HttpClientFacade for HttpClientFacadeImpl {
         self.client
             .send(req)
             .await
-            .map_err(|err| err.into())
-            .map(|response| response.into())
+            .map_err(Into::into)
+            .map(Into::into)
     }
 }

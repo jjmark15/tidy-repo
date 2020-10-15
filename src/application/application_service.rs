@@ -33,7 +33,7 @@ where
         repository_host
             .list_branches(repository_url)
             .await
-            .map_err(|err| err.into())
+            .map_err(Into::into)
     }
 
     pub fn new(repository_host: RepoHost) -> Self {
