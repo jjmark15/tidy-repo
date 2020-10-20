@@ -1,4 +1,5 @@
 use ports::cli::adapters::ClientOptions;
+use ports::cli::commands::CliCommand;
 use ports::repository_hosting::adapters::RepositoryHost;
 
 use crate::application::{ApplicationService, RepositoryHostError};
@@ -35,7 +36,7 @@ where
     async fn count_branches_in_repositories(&self) {
         let result = self
             .application_service
-            .count_branches_in_repositories(self.client_options.repository_urls().clone())
+            .count_branches_in_repositories(self.client_options.repository_urls().unwrap().clone())
             .await;
         match result {
             Ok(counts_map) => {
@@ -50,6 +51,8 @@ where
     }
 
     pub async fn run(&self) {
-        self.count_branches_in_repositories().await;
+        match self.client_options.command() {
+            CliCommand::Branches => self.count_branches_in_repositories().await,
+        }
     }
 }

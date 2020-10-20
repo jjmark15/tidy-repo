@@ -2,6 +2,7 @@ use structopt::StructOpt;
 
 use crate::application::RepositoryUrlDto;
 use crate::ports::cli::adapters::ClientOptions;
+use crate::ports::cli::commands::CliCommand;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Tidy Repo")]
@@ -15,9 +16,15 @@ pub enum StructOptClientOptions {
 }
 
 impl ClientOptions for StructOptClientOptions {
-    fn repository_urls(&self) -> &Vec<RepositoryUrlDto> {
+    fn command(&self) -> CliCommand {
         match self {
-            StructOptClientOptions::Branches { repository_urls } => &repository_urls,
+            StructOptClientOptions::Branches { .. } => CliCommand::Branches,
+        }
+    }
+
+    fn repository_urls(&self) -> Option<&Vec<RepositoryUrlDto>> {
+        match self {
+            StructOptClientOptions::Branches { repository_urls } => Some(&repository_urls),
         }
     }
 }
@@ -36,7 +43,7 @@ mod tests {
 
     #[test]
     fn returns_list_of_repository_urls() {
-        assert_that(&under_test().repository_urls())
+        assert_that(&under_test().repository_urls().unwrap())
             .is_equal_to(&vec![RepositoryUrlDto::new("url".to_string())])
     }
 }
