@@ -4,6 +4,8 @@ use std::str::FromStr;
 
 use serde::export::Formatter;
 
+use crate::domain::repository::RepositoryUrl;
+
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct RepositoryUrlDto(String);
 
@@ -22,6 +24,12 @@ impl FromStr for RepositoryUrlDto {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(RepositoryUrlDto::new(s.to_string()))
+    }
+}
+
+impl Into<RepositoryUrl> for RepositoryUrlDto {
+    fn into(self) -> RepositoryUrl {
+        RepositoryUrl::new(self.0)
     }
 }
 
@@ -50,6 +58,12 @@ mod tests {
     fn implements_from_string_infallibly() {
         assert_that(&RepositoryUrlDto::from_str(&"url".to_string()).unwrap())
             .is_equal_to(&RepositoryUrlDto::new("url".to_string()));
+    }
+
+    #[test]
+    fn implements_to_domain_repository_url() {
+        let result: RepositoryUrl = under_test().into();
+        assert_that(&result).is_equal_to(&RepositoryUrl::new("url".to_string()));
     }
 
     #[test]

@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 
-use crate::application::{ApplicationError, BranchNameDto, RepositoryHostError, RepositoryUrlDto};
-use crate::ports::repository_hosting::adapters::RepositoryHost;
+use crate::application::{ApplicationError, RepositoryUrlDto};
+use crate::domain::count_branches::BranchCounterService;
 
-pub struct ApplicationService<RepoHost: RepositoryHost> {
-    repository_host: RepoHost,
+pub struct ApplicationService<BranchCounter: BranchCounterService> {
+    branch_counter_service: BranchCounter,
 }
 
-impl<RepoHost> ApplicationService<RepoHost>
+impl<BranchCounter> ApplicationService<BranchCounter>
 where
-    RepoHost: RepositoryHost,
-    <RepoHost as RepositoryHost>::Err: Into<RepositoryHostError>,
+    BranchCounter: BranchCounterService,
 {
     pub async fn count_branches_in_repositories(
         &self,
@@ -19,25 +18,20 @@ where
         let mut hash_map: HashMap<RepositoryUrlDto, u32> = HashMap::new();
 
         for url in repository_urls {
-            let branches: Vec<BranchNameDto> =
-                Self::list_branches(&self.repository_host, &url).await?;
-            hash_map.insert(url.clone(), branches.len() as u32);
+            hash_map.insert(
+                url.clone(),
+                self.branch_counter_service
+                    .count_branches(url.into())
+                    .await?,
+            );
         }
         Ok(hash_map)
     }
 
-    async fn list_branches(
-        repository_host: &RepoHost,
-        repository_url: &RepositoryUrlDto,
-    ) -> Result<Vec<BranchNameDto>, RepositoryHostError> {
-        repository_host
-            .list_branches(repository_url)
-            .await
-            .map_err(Into::into)
-    }
-
-    pub fn new(repository_host: RepoHost) -> Self {
-        ApplicationService { repository_host }
+    pub fn new(branch_counter_service: BranchCounter) -> Self {
+        ApplicationService {
+            branch_counter_service,
+        }
     }
 }
 
@@ -46,52 +40,34 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::application::BranchNameDto;
-    use crate::ports::repository_hosting::adapters::MockRepositoryHost;
+    use crate::domain::count_branches::MockBranchCounterService;
+    use crate::domain::repository::RepositoryUrl;
 
     use super::*;
 
-    fn to_hash_map(list: Vec<(RepositoryUrlDto, u32)>) -> HashMap<RepositoryUrlDto, u32> {
-        let mut hash_map = HashMap::new();
-        list.iter().for_each(|(url, count)| {
-            hash_map.insert(url.clone(), *count);
-        });
-        hash_map
+    fn under_test(
+        branch_counter_service: MockBranchCounterService,
+    ) -> ApplicationService<MockBranchCounterService> {
+        ApplicationService::new(branch_counter_service)
     }
 
-    fn prepare_mock_repository_host(
-        mock_repository_host: &mut MockRepositoryHost,
-        url: RepositoryUrlDto,
-        branches: Vec<BranchNameDto>,
+    fn mock_branch_counter_service() -> MockBranchCounterService {
+        MockBranchCounterService::default()
+    }
+
+    fn prepare_mock_branch_counter_service(
+        mock_branch_counter_service: &mut MockBranchCounterService,
+        url: RepositoryUrl,
+        count: u32,
     ) {
-        mock_repository_host
-            .expect_list_branches()
+        async fn async_this<T>(arg: T) -> T {
+            arg
+        }
+
+        mock_branch_counter_service
+            .expect_count_branches()
             .with(eq(url))
-            .returning(move |_| Ok(branches.clone()));
-    }
-
-    fn mock_repository_host() -> MockRepositoryHost {
-        let repository_url_1 = RepositoryUrlDto::new("1".to_string());
-        let repository_url_2 = RepositoryUrlDto::new("2".to_string());
-        let mut mock_repository_host = MockRepositoryHost::default();
-        prepare_mock_repository_host(
-            &mut mock_repository_host,
-            repository_url_1,
-            to_branch_names(vec!["1"]),
-        );
-        prepare_mock_repository_host(
-            &mut mock_repository_host,
-            repository_url_2,
-            to_branch_names(vec!["1", "2"]),
-        );
-        mock_repository_host
-    }
-
-    fn to_branch_names(branch_name_strings: Vec<&str>) -> Vec<BranchNameDto> {
-        branch_name_strings
-            .iter()
-            .map(|s| BranchNameDto::new(s.to_string()))
-            .collect()
+            .returning(move |_| Box::pin(async_this(Ok(count))));
     }
 
     fn to_urls(repository_url_strings: Vec<&str>) -> Vec<RepositoryUrlDto> {
@@ -101,16 +77,30 @@ mod tests {
             .collect()
     }
 
-    fn under_test(repository_host: MockRepositoryHost) -> ApplicationService<MockRepositoryHost> {
-        ApplicationService::new(repository_host)
+    fn to_hash_map(list: Vec<(RepositoryUrlDto, u32)>) -> HashMap<RepositoryUrlDto, u32> {
+        let mut hash_map = HashMap::new();
+        list.iter().for_each(|(url, count)| {
+            hash_map.insert(url.clone(), *count);
+        });
+        hash_map
     }
 
     #[async_std::test]
     async fn counts_branches_in_list_of_repositories() {
-        let mock_repository_host = mock_repository_host();
+        let mut mock_branch_counter_service = mock_branch_counter_service();
+        prepare_mock_branch_counter_service(
+            &mut mock_branch_counter_service,
+            RepositoryUrl::new("1".to_string()),
+            1,
+        );
+        prepare_mock_branch_counter_service(
+            &mut mock_branch_counter_service,
+            RepositoryUrl::new("2".to_string()),
+            2,
+        );
 
         assert_that(
-            &under_test(mock_repository_host)
+            &under_test(mock_branch_counter_service)
                 .count_branches_in_repositories(to_urls(vec!["1", "2"]))
                 .await
                 .unwrap(),

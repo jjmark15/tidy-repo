@@ -1,32 +1,31 @@
 use ports::cli::adapters::ClientOptions;
 use ports::cli::commands::CliCommand;
-use ports::repository_hosting::adapters::RepositoryHost;
 
-use crate::application::{ApplicationService, RepositoryHostError};
+use crate::application::ApplicationService;
 use crate::cli_results::CountBranchesResult;
+use crate::domain::count_branches::BranchCounterService;
 
 pub mod application;
 mod cli_results;
+pub mod domain;
 pub mod ports;
 pub mod utils;
 
-pub struct TidyRepoClient<CO, RepoClient>
+pub struct TidyRepoClient<CO, BranchCounter>
 where
     CO: ClientOptions,
-    RepoClient: RepositoryHost,
-    <RepoClient as RepositoryHost>::Err: Into<RepositoryHostError>,
+    BranchCounter: BranchCounterService,
 {
     client_options: CO,
-    application_service: ApplicationService<RepoClient>,
+    application_service: ApplicationService<BranchCounter>,
 }
 
-impl<CO, RepoClient> TidyRepoClient<CO, RepoClient>
+impl<CO, BranchCounter> TidyRepoClient<CO, BranchCounter>
 where
     CO: ClientOptions,
-    RepoClient: RepositoryHost,
-    <RepoClient as RepositoryHost>::Err: Into<RepositoryHostError>,
+    BranchCounter: BranchCounterService,
 {
-    pub fn new(client_options: CO, application_service: ApplicationService<RepoClient>) -> Self {
+    pub fn new(client_options: CO, application_service: ApplicationService<BranchCounter>) -> Self {
         TidyRepoClient {
             client_options,
             application_service,
