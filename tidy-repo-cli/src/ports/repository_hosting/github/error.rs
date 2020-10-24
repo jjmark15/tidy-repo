@@ -2,7 +2,7 @@ use crate::application::RepositoryUrlDto;
 use crate::ports::repository_hosting::github::parse_repository_url::RepositoryUrlParseError;
 
 #[derive(Debug, thiserror::Error)]
-pub enum GithubClientError {
+pub enum GitHubClientError {
     #[error(transparent)]
     RepositoryUrlParseError(#[from] RepositoryUrlParseError),
     #[error(transparent)]
@@ -13,4 +13,6 @@ pub enum GithubClientError {
     ApiUrlParseError(http_types::url::ParseError),
     #[error("repository '{0}' not found")]
     RepositoryNotFound(RepositoryUrlDto),
+    #[error("unexpected response from GitHub")]
+    Unexpected,
 }

@@ -90,20 +90,23 @@ mod tests {
     fn fails_to_parse_github_repository_url_missing_owner() {
         let url = RepositoryUrlDto::new("https://github.com//repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
-        assert_that(&under_test.parse(url)).is_err();
+        let result = under_test.parse(url);
+        assert_that(&matches!(result.err().unwrap(), RepositoryUrlParseError {..})).is_true();
     }
 
     #[test]
     fn fails_to_parse_github_repository_url_missing_repo_name() {
         let url = RepositoryUrlDto::new("https://github.com/owner".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
-        assert_that(&under_test.parse(url)).is_err();
+        let result = under_test.parse(url);
+        assert_that(&matches!(result.err().unwrap(), RepositoryUrlParseError {..})).is_true();
     }
 
     #[test]
     fn fails_to_parse_github_repository_url_with_non_github_base_url() {
         let url = RepositoryUrlDto::new("https://not-github.com/owner/repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
-        assert_that(&under_test.parse(url)).is_err();
+        let result = under_test.parse(url);
+        assert_that(&matches!(result.err().unwrap(), RepositoryUrlParseError {..})).is_true();
     }
 }
