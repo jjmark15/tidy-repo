@@ -1,6 +1,6 @@
 use crate::domain::value_object::ValueObject;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Branch {
     name: String,
 }

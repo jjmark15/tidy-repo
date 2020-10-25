@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::domain::repository_host::TestRepositoryHostError;
+use crate::ports::repository_hosting::adapters::TestRepositoryHostError;
 use crate::ports::repository_hosting::github::GithubClientError;
 
 #[derive(Debug, thiserror::Error)]

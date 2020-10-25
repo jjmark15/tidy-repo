@@ -6,5 +6,4 @@ pub use repository_url::*;
 mod application_service;
 mod branch_name;
 mod error;
-mod repository_host;
 mod repository_url;

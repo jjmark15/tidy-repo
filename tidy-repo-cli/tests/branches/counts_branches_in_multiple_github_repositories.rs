@@ -1,6 +1,7 @@
-use crate::branches::{branches_command, count_results_with_header};
-
-use super::mock_github_api_server_for_successful_list_branches;
+use crate::branches::{
+    branches_command, count_results_with_header,
+    mock_github_api_server_for_successful_list_branches,
+};
 
 #[test]
 fn counts_branches_in_multiple_github_repositories() {
