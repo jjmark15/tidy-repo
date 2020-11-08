@@ -53,8 +53,7 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::domain::error::RepositoryHostError;
-    use crate::domain::repository_host::MockRepositoryHostWrapper;
+    use crate::domain::repository_host::{MockRepositoryHostWrapper, RepositoryHostError};
     use crate::ports::repository_hosting::TestRepositoryHostError;
 
     use super::*;

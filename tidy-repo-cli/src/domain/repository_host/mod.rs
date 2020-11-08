@@ -1,14 +1,15 @@
 use async_trait::async_trait;
 
 pub use authenticated::*;
+pub use error::*;
 pub use unauthenticated::*;
 
 use crate::domain::branch::Branch;
-use crate::domain::error::RepositoryHostError;
 use crate::domain::repository::RepositoryUrl;
 use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 
 mod authenticated;
+mod error;
 mod unauthenticated;
 
 #[async_trait]

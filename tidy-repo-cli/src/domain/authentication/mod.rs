@@ -4,7 +4,7 @@ pub use github_authentication_service::*;
 pub use github_token::*;
 
 use crate::domain::authentication_persistence::AuthenticationPersistenceError;
-use crate::domain::error::RepositoryHostError;
+use crate::domain::repository_host::RepositoryHostError;
 
 mod github_authentication_service;
 mod github_token;
