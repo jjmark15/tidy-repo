@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 
+use crate::domain::authentication::persistence::PersistAuthentication;
 use crate::domain::authentication::{
     AuthenticationError, AuthenticationService, GitHubAuthenticationToken,
 };
-use crate::domain::authentication_persistence::PersistAuthentication;
 use crate::domain::repository_host::RepositoryHostWrapper;
 use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 
@@ -75,7 +75,7 @@ mod tests {
     use predicates::ord::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication_persistence::{
+    use crate::domain::authentication::persistence::{
         AuthenticationPersistenceError, MockPersistAuthentication,
     };
     use crate::domain::repository_host::MockRepositoryHostWrapper;

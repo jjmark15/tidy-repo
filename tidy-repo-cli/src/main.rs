@@ -1,8 +1,8 @@
 use structopt::StructOpt;
 
 use tidy_repo::application::ApplicationService;
+use tidy_repo::domain::authentication::persistence::PersistAuthenticationImpl;
 use tidy_repo::domain::authentication::{GitHubAuthenticationService, GitHubAuthenticationToken};
-use tidy_repo::domain::authentication_persistence::PersistAuthenticationImpl;
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
 use tidy_repo::domain::repository_host::{
     AuthenticatedRepositoryHostWrapper, UnauthenticatedRepositoryHostWrapper,

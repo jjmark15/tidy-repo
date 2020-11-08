@@ -64,8 +64,8 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
+    use crate::domain::authentication::persistence::AuthenticationPersistenceError;
     use crate::domain::authentication::{AuthenticationError, MockAuthenticationService};
-    use crate::domain::authentication_persistence::AuthenticationPersistenceError;
     use crate::domain::count_branches::MockBranchCounterService;
     use crate::domain::repository::RepositoryUrl;
 

@@ -2,12 +2,13 @@ use async_trait::async_trait;
 
 pub use github_authentication_service::*;
 pub use github_token::*;
+use persistence::AuthenticationPersistenceError;
 
-use crate::domain::authentication_persistence::AuthenticationPersistenceError;
 use crate::domain::repository_host::RepositoryHostError;
 
 mod github_authentication_service;
 mod github_token;
+pub mod persistence;
 
 #[async_trait]
 pub trait AuthenticationService {
