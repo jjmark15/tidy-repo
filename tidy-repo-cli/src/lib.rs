@@ -1,5 +1,5 @@
-use ports::cli::adapters::ClientOptions;
 use ports::cli::commands::CliCommand;
+use ports::cli::ClientOptions;
 
 use crate::application::ApplicationService;
 use crate::cli_results::CountBranchesResult;

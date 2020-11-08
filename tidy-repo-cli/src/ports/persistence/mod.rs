@@ -2,7 +2,7 @@ pub use credentials::*;
 pub use error::*;
 pub use ports::*;
 
+pub mod adapters;
 mod credentials;
 mod error;
-pub mod filesystem;
 mod ports;

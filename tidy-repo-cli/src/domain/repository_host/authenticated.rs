@@ -8,8 +8,8 @@ use crate::domain::error::RepositoryHostError;
 use crate::domain::repository::RepositoryUrl;
 use crate::domain::repository_host::RepositoryHostWrapper;
 use crate::domain::value_object::ValueObject;
-use crate::ports::repository_hosting::adapters::RepositoryHost;
 use crate::ports::repository_hosting::AuthenticationCredentialValidity;
+use crate::ports::repository_hosting::RepositoryHost;
 
 pub struct AuthenticatedRepositoryHostWrapper<RH, AS, AC>
 where
@@ -89,7 +89,7 @@ mod tests {
 
     use crate::application::BranchNameDto;
     use crate::domain::authentication::{AuthenticationError, MockAuthenticationService};
-    use crate::ports::repository_hosting::adapters::{MockRepositoryHost, TestRepositoryHostError};
+    use crate::ports::repository_hosting::{MockRepositoryHost, TestRepositoryHostError};
 
     use super::*;
 

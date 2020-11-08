@@ -1,8 +1,8 @@
 use structopt::StructOpt;
 
 use crate::application::RepositoryUrlDto;
-use crate::ports::cli::adapters::ClientOptions;
 use crate::ports::cli::commands::CliCommand;
+use crate::ports::cli::ports::ClientOptions;
 use crate::ports::cli::GitHubAuthenticationToken;
 
 #[derive(StructOpt, Debug)]

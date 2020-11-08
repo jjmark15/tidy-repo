@@ -1,5 +1,7 @@
+pub use ports::*;
+
 pub mod adapters;
-pub mod github;
+mod ports;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum AuthenticationCredentialValidity {

@@ -1,4 +1,4 @@
-use crate::ports::persistence::filesystem::FileSystemPersistenceError;
+use crate::ports::persistence::adapters::filesystem::FileSystemPersistenceError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PersistenceError {

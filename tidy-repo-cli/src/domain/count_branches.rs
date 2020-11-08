@@ -55,7 +55,7 @@ mod tests {
 
     use crate::domain::error::RepositoryHostError;
     use crate::domain::repository_host::MockRepositoryHostWrapper;
-    use crate::ports::repository_hosting::adapters::TestRepositoryHostError;
+    use crate::ports::repository_hosting::TestRepositoryHostError;
 
     use super::*;
 

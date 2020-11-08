@@ -1,7 +1,7 @@
 use crate::domain::authentication::AuthenticationError;
+use crate::ports::repository_hosting::adapters::github::GitHubClientError;
 #[cfg(test)]
-use crate::ports::repository_hosting::adapters::TestRepositoryHostError;
-use crate::ports::repository_hosting::github::GitHubClientError;
+use crate::ports::repository_hosting::TestRepositoryHostError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DomainError {

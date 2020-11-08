@@ -7,9 +7,11 @@ use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
 use tidy_repo::domain::repository_host::{
     AuthenticatedRepositoryHostWrapper, UnauthenticatedRepositoryHostWrapper,
 };
-use tidy_repo::ports::cli::structopt::StructOptClientOptions;
-use tidy_repo::ports::persistence::filesystem::CredentialsFileSystemPersistenceService;
-use tidy_repo::ports::repository_hosting::github::{GitHubClient, GitHubRepositoryUrlParserImpl};
+use tidy_repo::ports::cli::adapters::structopt::StructOptClientOptions;
+use tidy_repo::ports::persistence::adapters::filesystem::CredentialsFileSystemPersistenceService;
+use tidy_repo::ports::repository_hosting::adapters::github::{
+    GitHubClient, GitHubRepositoryUrlParserImpl,
+};
 use tidy_repo::utils::environment::EnvironmentReaderStd;
 use tidy_repo::utils::http::HttpClientFacadeImpl;
 use tidy_repo::TidyRepoClient;
