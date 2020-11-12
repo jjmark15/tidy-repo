@@ -17,7 +17,7 @@ pub trait RepositoryHostWrapper {
     type AuthenticationCredentials;
 
     async fn list_branches(
-        &mut self,
+        &self,
         repository_url: &RepositoryUrl,
     ) -> Result<Vec<Branch>, RepositoryHostError>;
 
@@ -36,7 +36,7 @@ mockall::mock! {
         type AuthenticationCredentials = AC;
 
         async fn list_branches(
-            &mut self,
+            &self,
             repository_url: &RepositoryUrl,
         ) -> Result<Vec<Branch>, RepositoryHostError>;
 

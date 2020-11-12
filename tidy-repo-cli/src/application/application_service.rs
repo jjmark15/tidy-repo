@@ -21,8 +21,15 @@ where
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
 {
+    pub fn new(branch_counter_service: BranchCounter, github_authentication_service: GAS) -> Self {
+        ApplicationService {
+            branch_counter_service,
+            github_authentication_service,
+        }
+    }
+
     pub async fn count_branches_in_repositories(
-        &mut self,
+        &self,
         repository_urls: Vec<RepositoryUrlDto>,
     ) -> Result<HashMap<RepositoryUrlDto, u32>, ApplicationError> {
         let mut hash_map: HashMap<RepositoryUrlDto, u32> = HashMap::new();
@@ -38,7 +45,7 @@ where
         Ok(hash_map)
     }
 
-    pub async fn authenticate_github(
+    pub async fn authenticate_app_with_github(
         &self,
         github_token: CliGitHubAuthenticationToken,
     ) -> Result<(), ApplicationError> {
@@ -49,13 +56,6 @@ where
             .await
             .map_err(DomainError::from)
             .map_err(ApplicationError::from)
-    }
-
-    pub fn new(branch_counter_service: BranchCounter, github_authentication_service: GAS) -> Self {
-        ApplicationService {
-            branch_counter_service,
-            github_authentication_service,
-        }
     }
 }
 
@@ -162,7 +162,7 @@ mod tests {
                 mock_branch_counter_service,
                 mock_github_authentication_service,
             )
-            .authenticate_github(github_credentials)
+            .authenticate_app_with_github(github_credentials)
             .await,
         )
         .is_ok();
@@ -188,7 +188,7 @@ mod tests {
             mock_branch_counter_service,
             mock_github_authentication_service,
         )
-        .authenticate_github(github_credentials)
+        .authenticate_app_with_github(github_credentials)
         .await;
 
         assert_that(&matches!(

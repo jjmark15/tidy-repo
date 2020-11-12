@@ -42,7 +42,7 @@ where
     type AuthenticationCredentials = AC;
 
     async fn list_branches(
-        &mut self,
+        &self,
         repository_url: &RepositoryUrl,
     ) -> Result<Vec<Branch>, RepositoryHostError> {
         let repo_url_dto = RepositoryUrlDto::new(repository_url.value());

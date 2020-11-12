@@ -24,35 +24,23 @@ where
 impl<RH, AS, AC> AuthenticatedRepositoryHostWrapper<RH, AS, AC>
 where
     RH: RepositoryHost,
+    <RH as RepositoryHost>::AuthenticationCredentials: From<AC>,
     <RH as RepositoryHost>::Err: Into<RepositoryHostError>,
     AS: AuthenticationService<AuthenticationCredentials = AC>,
 {
     pub fn new(repository_host: RH, authentication_service: AS) -> Self {
-        AuthenticatedRepositoryHostWrapper {
+        let mut wrapper = AuthenticatedRepositoryHostWrapper {
             repository_host,
             authentication_service,
             authentication_credentials_marker: PhantomData::default(),
-        }
+        };
+
+        async_std::task::block_on(wrapper.authenticate_repository_host());
+
+        wrapper
     }
-}
 
-#[async_trait]
-impl<RH, AS, AC> RepositoryHostWrapper for AuthenticatedRepositoryHostWrapper<RH, AS, AC>
-where
-    RH: RepositoryHost + Send + Sync,
-    <RH as RepositoryHost>::AuthenticationCredentials: From<AC>,
-    <RH as RepositoryHost>::Err: Into<RepositoryHostError> + Send + Sync,
-    AS: AuthenticationService<AuthenticationCredentials = AC> + Send + Sync,
-    AC: Send + Sync,
-{
-    type AuthenticationCredentials = AC;
-
-    async fn list_branches(
-        &mut self,
-        repository_url: &RepositoryUrl,
-    ) -> Result<Vec<Branch>, RepositoryHostError> {
-        let repo_url_dto = RepositoryUrlDto::new(repository_url.value());
-
+    async fn authenticate_repository_host(&mut self) {
         if let Ok(credentials) = self
             .authentication_service
             .authentication_credentials()
@@ -61,6 +49,24 @@ where
             self.repository_host
                 .set_authentication_credentials(credentials.into())
         }
+    }
+}
+
+#[async_trait]
+impl<RH, AS, AC> RepositoryHostWrapper for AuthenticatedRepositoryHostWrapper<RH, AS, AC>
+where
+    RH: RepositoryHost + Send + Sync,
+    <RH as RepositoryHost>::Err: Into<RepositoryHostError> + Send + Sync,
+    AS: AuthenticationService<AuthenticationCredentials = AC> + Send + Sync,
+    AC: Send + Sync,
+{
+    type AuthenticationCredentials = AC;
+
+    async fn list_branches(
+        &self,
+        repository_url: &RepositoryUrl,
+    ) -> Result<Vec<Branch>, RepositoryHostError> {
+        let repo_url_dto = RepositoryUrlDto::new(repository_url.value());
 
         self.repository_host
             .list_branches(&repo_url_dto)

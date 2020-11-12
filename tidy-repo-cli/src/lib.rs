@@ -60,7 +60,7 @@ where
     async fn authenticate_github(&self, github_token: GitHubAuthenticationToken) {
         let result = self
             .application_service
-            .authenticate_github(github_token)
+            .authenticate_app_with_github(github_token)
             .await;
         match result {
             Ok(_) => println!("Successfully authenticated with GitHub"),

@@ -8,7 +8,7 @@ use crate::domain::repository_host::RepositoryHostWrapper;
 #[async_trait]
 #[cfg_attr(test, mockall::automock)]
 pub trait BranchCounterService {
-    async fn count_branches(&mut self, repository_url: RepositoryUrl) -> Result<u32, DomainError>;
+    async fn count_branches(&self, repository_url: RepositoryUrl) -> Result<u32, DomainError>;
 }
 
 pub struct BranchCounterServiceImpl<RH>
@@ -27,7 +27,7 @@ where
     }
 
     async fn list_branches(
-        &mut self,
+        &self,
         repository_url: &RepositoryUrl,
     ) -> Result<Vec<Branch>, DomainError> {
         self.repository_host
@@ -42,7 +42,7 @@ impl<RH> BranchCounterService for BranchCounterServiceImpl<RH>
 where
     RH: RepositoryHostWrapper + Send + Sync,
 {
-    async fn count_branches(&mut self, repository_url: RepositoryUrl) -> Result<u32, DomainError> {
+    async fn count_branches(&self, repository_url: RepositoryUrl) -> Result<u32, DomainError> {
         let branches = self.list_branches(&repository_url).await?;
         Ok(branches.len() as u32)
     }
@@ -81,7 +81,7 @@ mod tests {
             RepositoryUrl::new("url".to_string()),
             vec![],
         );
-        let mut under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
+        let under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
         let repository_url = RepositoryUrl::new("url".to_string());
 
         assert_that(&under_test.count_branches(repository_url).await.unwrap()).is_equal_to(0);
@@ -95,7 +95,7 @@ mod tests {
             RepositoryUrl::new("url".to_string()),
             vec![Branch::new("1".to_string())],
         );
-        let mut under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
+        let under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
         let repository_url = RepositoryUrl::new("url".to_string());
 
         assert_that(&under_test.count_branches(repository_url).await.unwrap()).is_equal_to(1);
@@ -109,7 +109,7 @@ mod tests {
             RepositoryUrl::new("url".to_string()),
             vec![Branch::new("1".to_string()), Branch::new("2".to_string())],
         );
-        let mut under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
+        let under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
         let repository_url = RepositoryUrl::new("url".to_string());
 
         assert_that(&under_test.count_branches(repository_url).await.unwrap()).is_equal_to(2);
@@ -126,7 +126,7 @@ mod tests {
                     TestRepositoryHostError,
                 ))
             });
-        let mut under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
+        let under_test = BranchCounterServiceImpl::new(repository_host_wrapper);
         let repository_url = RepositoryUrl::new("url".to_string());
 
         let result = under_test.count_branches(repository_url).await;
