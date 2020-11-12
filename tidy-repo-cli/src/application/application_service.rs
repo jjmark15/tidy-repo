@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::iter::FromIterator;
+
+use futures::future::try_join_all;
 
 use crate::application::{ApplicationError, RepositoryUrlDto};
 use crate::domain::authentication::AuthenticationService;
@@ -32,17 +35,14 @@ where
         &self,
         repository_urls: Vec<RepositoryUrlDto>,
     ) -> Result<HashMap<RepositoryUrlDto, u32>, ApplicationError> {
-        let mut hash_map: HashMap<RepositoryUrlDto, u32> = HashMap::new();
-
-        for url in repository_urls {
-            hash_map.insert(
-                url.clone(),
-                self.branch_counter_service
-                    .count_branches(url.into())
-                    .await?,
-            );
-        }
-        Ok(hash_map)
+        Ok(HashMap::from_iter(
+            try_join_all(
+                repository_urls
+                    .iter()
+                    .map(|url| self.join_url_with_count(url.clone())),
+            )
+            .await?,
+        ))
     }
 
     pub async fn authenticate_app_with_github(
@@ -56,6 +56,17 @@ where
             .await
             .map_err(DomainError::from)
             .map_err(ApplicationError::from)
+    }
+
+    async fn join_url_with_count(
+        &self,
+        url: RepositoryUrlDto,
+    ) -> Result<(RepositoryUrlDto, u32), DomainError> {
+        let count = self
+            .branch_counter_service
+            .count_branches(url.clone().into())
+            .await?;
+        Ok((url, count))
     }
 }
 
