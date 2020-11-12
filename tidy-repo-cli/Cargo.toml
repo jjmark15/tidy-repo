@@ -5,10 +5,10 @@ authors = ["Josh Jones <ohblonddev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-async-std = { version = "1.6", features = ["attributes"] }
+async-std = { version = "1.7", features = ["attributes"] }
 async-trait = "0.1"
 futures = "0.3"
-http-types = "2.5"
+http-types = "2.7"
 regex = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -22,6 +22,6 @@ thiserror = "1.0"
 assert_cmd = "1.0"
 assert_fs = "1.0"
 mockall = "0.8"
-mockito = "0.27"
+mockito = "0.28"
 predicates = "1.0"
 spectral = "0.6"
