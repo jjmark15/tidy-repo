@@ -4,13 +4,13 @@ use async_trait::async_trait;
 use http_types::headers::HeaderName;
 use http_types::{Method, Url};
 
-use crate::application::{BranchNameDto, RepositoryUrlDto};
+use crate::application::repository::{BranchNameDto, RepositoryUrlDto};
 use crate::ports::repository_hosting::adapters::github::parse_repository_url::GitHubRepositoryUrlParser;
 use crate::ports::repository_hosting::adapters::github::responses::ListBranchesResponseBody;
 use crate::ports::repository_hosting::adapters::github::{
     GitHubAuthenticationToken, GitHubClientError,
 };
-use crate::ports::repository_hosting::ports::RepositoryHost;
+use crate::ports::repository_hosting::ports::RepositoryHostClient;
 use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 use crate::utils::environment::EnvironmentReader;
 use crate::utils::http::{HttpClientFacade, Request};
@@ -101,7 +101,7 @@ where
 }
 
 #[async_trait]
-impl<HttpClient, UrlParser, EnvReader> RepositoryHost
+impl<HttpClient, UrlParser, EnvReader> RepositoryHostClient
     for GitHubClient<HttpClient, UrlParser, EnvReader>
 where
     HttpClient: HttpClientFacade + Send + Sync,

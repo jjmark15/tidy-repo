@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use serde::export::Formatter;
 
-use crate::application::RepositoryUrlDto;
+use crate::application::repository::RepositoryUrlDto;
 
 #[derive(Debug)]
 pub struct CountBranchesResult {

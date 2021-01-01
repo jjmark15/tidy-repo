@@ -1,4 +1,4 @@
-use crate::application::RepositoryUrlDto;
+use crate::application::repository::RepositoryUrlDto;
 use crate::ports::repository_hosting::adapters::github::parse_repository_url::RepositoryUrlParseError;
 
 #[derive(Debug, thiserror::Error)]

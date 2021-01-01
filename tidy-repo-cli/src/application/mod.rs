@@ -1,9 +1,8 @@
 pub use application_service::*;
-pub use branch_name::*;
+pub use authentication::*;
 pub use error::*;
-pub use repository_url::*;
 
 mod application_service;
-mod branch_name;
+mod authentication;
 mod error;
-mod repository_url;
+pub mod repository;

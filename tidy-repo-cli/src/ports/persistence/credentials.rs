@@ -23,6 +23,11 @@ impl Credentials {
 pub struct GitHubAuthenticationToken(String);
 
 impl GitHubAuthenticationToken {
+    #[cfg(test)]
+    pub fn new(value: String) -> Self {
+        GitHubAuthenticationToken(value)
+    }
+
     pub fn value(&self) -> String {
         self.0.clone()
     }

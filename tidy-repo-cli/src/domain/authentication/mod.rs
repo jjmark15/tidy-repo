@@ -1,11 +1,10 @@
 use async_trait::async_trait;
 
+pub use authenticator::*;
 pub use github_authentication_service::*;
 pub use github_token::*;
-use persistence::AuthenticationPersistenceError;
 
-use crate::domain::repository_host::RepositoryHostError;
-
+mod authenticator;
 mod github_authentication_service;
 mod github_token;
 pub mod persistence;
@@ -49,10 +48,10 @@ pub enum AuthenticationError {
     NoCredentialsFound,
     #[error("invalid credentials")]
     InvalidCredentials,
-    #[error(transparent)]
-    PersistenceError(#[from] AuthenticationPersistenceError),
-    #[error(transparent)]
-    RepositoryHost(#[from] RepositoryHostError),
+    #[error("an error occurred during authentication persistence")]
+    Persistence,
+    #[error("Could not validate authentication")]
+    Validation,
     #[cfg(test)]
     #[error("test authentication error")]
     TestVariant,

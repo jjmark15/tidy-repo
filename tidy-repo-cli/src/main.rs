@@ -1,12 +1,11 @@
 use structopt::StructOpt;
 
-use tidy_repo::application::ApplicationService;
-use tidy_repo::domain::authentication::persistence::PersistAuthenticationImpl;
+use tidy_repo::application::{
+    repository::GitHubRepositoryProvider, ApplicationService,
+    FilesystemAuthenticationPersistenceService, GitHubAuthenticationValidator,
+};
 use tidy_repo::domain::authentication::{GitHubAuthenticationService, GitHubAuthenticationToken};
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
-use tidy_repo::domain::repository_host::{
-    AuthenticatedRepositoryHostWrapper, UnauthenticatedRepositoryHostWrapper,
-};
 use tidy_repo::ports::cli::adapters::structopt::StructOptClientOptions;
 use tidy_repo::ports::persistence::adapters::filesystem::CredentialsFileSystemPersistenceService;
 use tidy_repo::ports::repository_hosting::adapters::github::{
@@ -19,18 +18,12 @@ use tidy_repo::TidyRepoClient;
 type GitHubClientAlias =
     GitHubClient<HttpClientFacadeImpl, GitHubRepositoryUrlParserImpl, EnvironmentReaderStd>;
 type GitHubAuthenticationServiceAlias = GitHubAuthenticationService<
-    UnauthenticatedRepositoryHostWrapper<GitHubClientAlias, GitHubAuthenticationToken>,
-    PersistAuthenticationImpl<
-        GitHubAuthenticationToken,
-        CredentialsFileSystemPersistenceService<EnvironmentReaderStd>,
-    >,
+    GitHubAuthenticationValidator<GitHubClientAlias>,
+    FilesystemAuthenticationPersistenceServiceAlias,
 >;
-type BranchCounterServiceAlias = BranchCounterServiceImpl<
-    AuthenticatedRepositoryHostWrapper<
-        GitHubClientAlias,
-        GitHubAuthenticationServiceAlias,
-        GitHubAuthenticationToken,
-    >,
+type FilesystemAuthenticationPersistenceServiceAlias = FilesystemAuthenticationPersistenceService<
+    GitHubAuthenticationToken,
+    CredentialsFileSystemPersistenceService<EnvironmentReaderStd>,
 >;
 
 #[async_std::main]
@@ -47,24 +40,30 @@ fn github_client() -> GitHubClientAlias {
     GitHubClient::new(http_client, url_parser, EnvironmentReaderStd::new())
 }
 
+fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceServiceAlias {
+    FilesystemAuthenticationPersistenceService::new(CredentialsFileSystemPersistenceService::new(
+        EnvironmentReaderStd::new(),
+    ))
+}
+
 fn github_authentication_service() -> GitHubAuthenticationServiceAlias {
-    let environment_reader = EnvironmentReaderStd::new();
-    let unauthenticated_github_repository_host_wrapper =
-        UnauthenticatedRepositoryHostWrapper::new(github_client());
-    let github_authentication_persistence = PersistAuthenticationImpl::new(
-        CredentialsFileSystemPersistenceService::new(environment_reader),
-    );
     GitHubAuthenticationService::new(
-        unauthenticated_github_repository_host_wrapper,
-        github_authentication_persistence,
+        GitHubAuthenticationValidator::new(github_client()),
+        authentication_persistence_service(),
     )
 }
 
-fn application_service(
-) -> ApplicationService<BranchCounterServiceAlias, GitHubAuthenticationServiceAlias> {
-    let authenticated_github_repository_host_wrapper =
-        AuthenticatedRepositoryHostWrapper::new(github_client(), github_authentication_service());
-    let branch_counter_service =
-        BranchCounterServiceImpl::new(authenticated_github_repository_host_wrapper);
-    ApplicationService::new(branch_counter_service, github_authentication_service())
+fn application_service() -> ApplicationService<
+    BranchCounterServiceImpl,
+    GitHubAuthenticationServiceAlias,
+    GitHubRepositoryProvider<GitHubClientAlias, FilesystemAuthenticationPersistenceServiceAlias>,
+> {
+    let github_repository_provider =
+        GitHubRepositoryProvider::new(github_client(), authentication_persistence_service());
+    let branch_counter_service = BranchCounterServiceImpl::new();
+    ApplicationService::new(
+        branch_counter_service,
+        github_authentication_service(),
+        github_repository_provider,
+    )
 }

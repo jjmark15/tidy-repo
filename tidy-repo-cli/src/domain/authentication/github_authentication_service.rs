@@ -1,39 +1,41 @@
 use async_trait::async_trait;
 
 use crate::domain::authentication::persistence::PersistAuthentication;
+use crate::domain::authentication::AuthenticationValidity;
 use crate::domain::authentication::{
     AuthenticationError, AuthenticationService, GitHubAuthenticationToken,
+    RepositoryAuthenticationValidator,
 };
-use crate::domain::repository_host::RepositoryHostWrapper;
-use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 
 #[derive(Debug, Default)]
-pub struct GitHubAuthenticationService<RH, PA>
+pub struct GitHubAuthenticationService<AV, PA>
 where
-    RH: RepositoryHostWrapper<AuthenticationCredentials = GitHubAuthenticationToken>,
+    AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>,
     PA: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken>,
 {
-    repository_host: RH,
+    authentication_validator: AV,
     authentication_persistence: PA,
 }
 
-impl<RH, PA> GitHubAuthenticationService<RH, PA>
+impl<AV, PA> GitHubAuthenticationService<AV, PA>
 where
-    RH: RepositoryHostWrapper<AuthenticationCredentials = GitHubAuthenticationToken>,
+    AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>,
     PA: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken>,
 {
-    pub fn new(repository_host: RH, authentication_persistence: PA) -> Self {
+    pub fn new(authentication_validator: AV, authentication_persistence: PA) -> Self {
         GitHubAuthenticationService {
-            repository_host,
+            authentication_validator,
             authentication_persistence,
         }
     }
 }
 
 #[async_trait]
-impl<RH, PA> AuthenticationService for GitHubAuthenticationService<RH, PA>
+impl<AV, PA> AuthenticationService for GitHubAuthenticationService<AV, PA>
 where
-    RH: RepositoryHostWrapper<AuthenticationCredentials = GitHubAuthenticationToken> + Send + Sync,
+    AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>
+        + Send
+        + Sync,
     PA: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken> + Send + Sync,
 {
     type AuthenticationCredentials = GitHubAuthenticationToken;
@@ -43,20 +45,18 @@ where
         credentials: Self::AuthenticationCredentials,
     ) -> Result<(), AuthenticationError> {
         let validity = self
-            .repository_host
+            .authentication_validator
             .validate_authentication_credentials(credentials.clone())
             .await
-            .map_err(AuthenticationError::from)?;
+            .map_err(|_| AuthenticationError::Validation)?;
 
         match validity {
-            AuthenticationCredentialValidity::Valid => self
+            AuthenticationValidity::Valid => self
                 .authentication_persistence
                 .persist_credentials(credentials)
                 .await
-                .map_err(Into::into),
-            AuthenticationCredentialValidity::Invalid => {
-                Err(AuthenticationError::InvalidCredentials)
-            }
+                .map_err(|_| AuthenticationError::Persistence),
+            AuthenticationValidity::Invalid => Err(AuthenticationError::InvalidCredentials),
         }
     }
 
@@ -66,7 +66,7 @@ where
         self.authentication_persistence
             .credentials()
             .await
-            .map_err(Into::into)
+            .map_err(|_| AuthenticationError::Persistence)
     }
 }
 
@@ -75,30 +75,32 @@ mod tests {
     use predicates::ord::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::{
-        AuthenticationPersistenceError, MockPersistAuthentication,
-    };
-    use crate::domain::repository_host::MockRepositoryHostWrapper;
-    use crate::ports::repository_hosting::AuthenticationCredentialValidity;
+    use crate::domain::authentication::persistence::MockPersistAuthentication;
+    use crate::domain::authentication::AuthenticationValidity;
+    use crate::domain::authentication::MockRepositoryAuthenticationValidator;
 
     use super::*;
 
+    type MockRepositoryAuthenticationValidatorAlias =
+        MockRepositoryAuthenticationValidator<GitHubAuthenticationToken, ()>;
+    type MockPersistAuthenticationAlias = MockPersistAuthentication<GitHubAuthenticationToken, ()>;
+
     fn under_test(
-        repository_host: MockRepositoryHostWrapper<GitHubAuthenticationToken>,
-        authentication_persistence: MockPersistAuthentication<GitHubAuthenticationToken>,
+        authentication_validator: MockRepositoryAuthenticationValidatorAlias,
+        authentication_persistence: MockPersistAuthenticationAlias,
     ) -> GitHubAuthenticationService<
-        MockRepositoryHostWrapper<GitHubAuthenticationToken>,
-        MockPersistAuthentication<GitHubAuthenticationToken>,
+        MockRepositoryAuthenticationValidatorAlias,
+        MockPersistAuthenticationAlias,
     > {
-        GitHubAuthenticationService::new(repository_host, authentication_persistence)
+        GitHubAuthenticationService::new(authentication_validator, authentication_persistence)
     }
 
-    fn mock_authentication_persistence() -> MockPersistAuthentication<GitHubAuthenticationToken> {
-        MockPersistAuthentication::default()
+    fn mock_authentication_persistence() -> MockPersistAuthenticationAlias {
+        MockPersistAuthenticationAlias::default()
     }
 
-    fn mock_repository_host() -> MockRepositoryHostWrapper<GitHubAuthenticationToken> {
-        MockRepositoryHostWrapper::default()
+    fn mock_authentication_validator() -> MockRepositoryAuthenticationValidatorAlias {
+        MockRepositoryAuthenticationValidatorAlias::default()
     }
 
     #[async_std::test]
@@ -109,16 +111,19 @@ mod tests {
             .expect_persist_credentials()
             .with(eq(token.clone()))
             .returning(|_| Ok(()));
-        let mut mock_repository_host = mock_repository_host();
-        mock_repository_host
+        let mut mock_authentication_validator = mock_authentication_validator();
+        mock_authentication_validator
             .expect_validate_authentication_credentials()
             .with(eq(token.clone()))
-            .returning(|_| Ok(AuthenticationCredentialValidity::Valid));
+            .returning(|_| Ok(AuthenticationValidity::Valid));
 
         assert_that(
-            &under_test(mock_repository_host, mock_authentication_persistence)
-                .authenticate(token)
-                .await,
+            &under_test(
+                mock_authentication_validator,
+                mock_authentication_persistence,
+            )
+            .authenticate(token)
+            .await,
         )
         .is_ok();
     }
@@ -131,15 +136,18 @@ mod tests {
             .expect_persist_credentials()
             .with(eq(token.clone()))
             .returning(|_| Ok(()));
-        let mut mock_repository_host = mock_repository_host();
-        mock_repository_host
+        let mut mock_authentication_validator = mock_authentication_validator();
+        mock_authentication_validator
             .expect_validate_authentication_credentials()
             .with(eq(token.clone()))
-            .returning(|_| Ok(AuthenticationCredentialValidity::Invalid));
+            .returning(|_| Ok(AuthenticationValidity::Invalid));
 
-        let result = under_test(mock_repository_host, mock_authentication_persistence)
-            .authenticate(token)
-            .await;
+        let result = under_test(
+            mock_authentication_validator,
+            mock_authentication_persistence,
+        )
+        .authenticate(token)
+        .await;
 
         assert_that(&matches!(result.err().unwrap(), AuthenticationError::InvalidCredentials {..}))
             .is_true();
@@ -152,19 +160,25 @@ mod tests {
         mock_authentication_persistence
             .expect_persist_credentials()
             .with(eq(token.clone()))
-            .returning(|_| Err(AuthenticationPersistenceError::TestVariant));
-        let mut mock_repository_host = mock_repository_host();
-        mock_repository_host
+            .returning(|_| Err(()));
+        let mut mock_authentication_validator = mock_authentication_validator();
+        mock_authentication_validator
             .expect_validate_authentication_credentials()
             .with(eq(token.clone()))
-            .returning(|_| Ok(AuthenticationCredentialValidity::Valid));
+            .returning(|_| Ok(AuthenticationValidity::Valid));
 
-        let result = under_test(mock_repository_host, mock_authentication_persistence)
-            .authenticate(token)
-            .await;
+        let result = under_test(
+            mock_authentication_validator,
+            mock_authentication_persistence,
+        )
+        .authenticate(token)
+        .await;
 
-        assert_that(&matches!(result.err().unwrap(), AuthenticationError::PersistenceError {..}))
-            .is_true();
+        assert_that(&matches!(
+            result.err().unwrap(),
+            AuthenticationError::Persistence
+        ))
+        .is_true();
     }
 
     #[async_std::test]
@@ -173,12 +187,15 @@ mod tests {
         mock_authentication_persistence
             .expect_credentials()
             .returning(|| Ok(GitHubAuthenticationToken::new("credentials".into())));
-        let mock_repository_host = mock_repository_host();
+        let mock_authentication_validator = mock_authentication_validator();
 
         assert_that(
-            &under_test(mock_repository_host, mock_authentication_persistence)
-                .authentication_credentials()
-                .await,
+            &under_test(
+                mock_authentication_validator,
+                mock_authentication_persistence,
+            )
+            .authentication_credentials()
+            .await,
         )
         .is_ok();
     }
@@ -188,14 +205,20 @@ mod tests {
         let mut mock_authentication_persistence = mock_authentication_persistence();
         mock_authentication_persistence
             .expect_credentials()
-            .returning(|| Err(AuthenticationPersistenceError::TestVariant));
-        let mock_repository_host = mock_repository_host();
+            .returning(|| Err(()));
+        let mock_authentication_validator = mock_authentication_validator();
 
-        let result = under_test(mock_repository_host, mock_authentication_persistence)
-            .authentication_credentials()
-            .await;
+        let result = under_test(
+            mock_authentication_validator,
+            mock_authentication_persistence,
+        )
+        .authentication_credentials()
+        .await;
 
-        assert_that(&matches!(result.err().unwrap(), AuthenticationError::PersistenceError {..}))
-            .is_true();
+        assert_that(&matches!(
+            result.err().unwrap(),
+            AuthenticationError::Persistence
+        ))
+        .is_true();
     }
 }

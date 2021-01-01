@@ -1,5 +1,5 @@
 use assert_fs::fixture::PathChild;
-use predicates::str::is_match;
+use predicates::str::ends_with;
 
 use crate::authenticate::{
     authenticate_command, mock_github_api_server_for_successful_authentication_check,
@@ -16,8 +16,8 @@ fn fails_to_authenticate_with_github_when_app_home_directory_does_not_exist() {
         .arg("OAUTH-TOKEN")
         .assert();
 
-    assert
-        .failure()
-        .stderr(is_match(r"could not create `.+credentials\.yml`\n$").unwrap());
+    assert.failure().stderr(ends_with(
+        "an error occurred during authentication persistence\n",
+    ));
     temp_home_directory.close().unwrap();
 }

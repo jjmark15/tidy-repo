@@ -1,4 +1,4 @@
-use crate::application::RepositoryUrlDto;
+use crate::application::repository::RepositoryUrlDto;
 use crate::ports::cli::commands::CliCommand;
 use crate::ports::cli::GitHubAuthenticationToken;
 

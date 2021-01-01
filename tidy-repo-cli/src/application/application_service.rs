@@ -1,50 +1,74 @@
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use crate::application::{ApplicationError, RepositoryUrlDto};
+use futures::future::try_join_all;
+
+use crate::application::repository::RepositoryProviderError;
+use crate::application::{repository::RepositoryUrlDto, ApplicationError};
 use crate::domain::authentication::AuthenticationService;
 use crate::domain::authentication::GitHubAuthenticationToken as DomainCliGitHubAuthenticationToken;
 use crate::domain::count_branches::BranchCounterService;
 use crate::domain::error::DomainError;
-use crate::domain::repository::RepositoryUrl;
+use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
 use crate::ports::cli::GitHubAuthenticationToken as CliGitHubAuthenticationToken;
 
-pub struct ApplicationService<BranchCounter, GAS>
+pub struct ApplicationService<BranchCounter, GAS, GRP>
 where
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
+    GRP: RepositoryProvider<Error = RepositoryProviderError>,
 {
     branch_counter_service: BranchCounter,
     github_authentication_service: GAS,
+    github_repository_provider: GRP,
 }
 
-impl<BranchCounter, GAS> ApplicationService<BranchCounter, GAS>
+impl<BranchCounter, GAS, GRP> ApplicationService<BranchCounter, GAS, GRP>
 where
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
+    GRP: RepositoryProvider<Error = RepositoryProviderError>,
 {
-    pub fn new(branch_counter_service: BranchCounter, github_authentication_service: GAS) -> Self {
+    pub fn new(
+        branch_counter_service: BranchCounter,
+        github_authentication_service: GAS,
+        github_repository_provider: GRP,
+    ) -> Self {
         ApplicationService {
             branch_counter_service,
             github_authentication_service,
+            github_repository_provider,
         }
+    }
+
+    async fn get_repositories(
+        &self,
+        repository_urls: Vec<RepositoryUrlDto>,
+    ) -> Result<Vec<Repository>, RepositoryProviderError> {
+        let domain_urls: Vec<RepositoryUrl> = repository_urls
+            .iter()
+            .cloned()
+            .map(RepositoryUrlDto::into)
+            .collect();
+        try_join_all(
+            domain_urls
+                .iter()
+                .map(|url| self.github_repository_provider.get_repository(url)),
+        )
+        .await
     }
 
     pub async fn count_branches_in_repositories(
         &self,
         repository_urls: Vec<RepositoryUrlDto>,
     ) -> Result<HashMap<RepositoryUrlDto, u32>, ApplicationError> {
-        let domain_repository_urls: Vec<RepositoryUrl> = repository_urls
-            .iter()
-            .map(|url| url.clone().into())
-            .collect();
+        let repositories = self.get_repositories(repository_urls).await?;
 
         Ok(HashMap::from_iter(
             self.branch_counter_service
-                .count_branches_in_repositories(domain_repository_urls)
-                .await?
+                .count_branches_in_repositories(repositories)
                 .iter()
-                .map(|(url, count)| (RepositoryUrlDto::from(url.clone()), *count)),
+                .map(|(repository, count)| (repository.url().clone().into(), *count)),
         ))
     }
 
@@ -67,43 +91,51 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::AuthenticationPersistenceError;
     use crate::domain::authentication::{AuthenticationError, MockAuthenticationService};
-    use crate::domain::count_branches::MockBranchCounterService;
-    use crate::domain::repository::RepositoryUrl;
+    use crate::domain::count_branches::BranchCounterServiceImpl;
+    use crate::domain::repository::Branch;
+    use crate::domain::repository::MockRepositoryProvider;
 
     use super::*;
 
     type MockGitHubAuthenticationService =
         MockAuthenticationService<DomainCliGitHubAuthenticationToken>;
 
-    fn under_test(
-        branch_counter_service: MockBranchCounterService,
+    fn under_test<BCS: BranchCounterService>(
+        branch_counter_service: BCS,
         github_authentication_service: MockGitHubAuthenticationService,
-    ) -> ApplicationService<MockBranchCounterService, MockGitHubAuthenticationService> {
-        ApplicationService::new(branch_counter_service, github_authentication_service)
+        github_repository_provider: MockRepositoryProvider<RepositoryProviderError>,
+    ) -> ApplicationService<
+        BCS,
+        MockGitHubAuthenticationService,
+        MockRepositoryProvider<RepositoryProviderError>,
+    > {
+        ApplicationService::new(
+            branch_counter_service,
+            github_authentication_service,
+            github_repository_provider,
+        )
     }
 
-    fn mock_branch_counter_service() -> MockBranchCounterService {
-        MockBranchCounterService::default()
+    fn repository_with_branches(n: u32) -> Repository {
+        Repository::new(
+            RepositoryUrl::new(n.to_string()),
+            (0..n).map(|index| Branch::new(index.to_string())).collect(),
+        )
     }
 
-    fn prepare_mock_branch_counter_service(
-        mock_branch_counter_service: &mut MockBranchCounterService,
-        urls_and_counts: Vec<(RepositoryUrl, u32)>,
+    fn prepare_mock_repository_provider(
+        mock: &mut MockRepositoryProvider<RepositoryProviderError>,
+        urls_and_branch_counts: Vec<(RepositoryUrl, u32)>,
     ) {
-        async fn async_this<T>(arg: T) -> T {
-            arg
-        }
-        let result: HashMap<RepositoryUrl, u32> = HashMap::from_iter(urls_and_counts.clone());
-
-        mock_branch_counter_service
-            .expect_count_branches_in_repositories()
-            .with(eq(urls_and_counts
-                .iter()
-                .map(|(url, _count)| url.clone())
-                .collect::<Vec<RepositoryUrl>>()))
-            .returning(move |_| Box::pin(async_this(Ok(result.clone()))));
+        urls_and_branch_counts
+            .iter()
+            .cloned()
+            .for_each(|(url, count)| {
+                mock.expect_get_repository()
+                    .with(eq(url))
+                    .returning(move |_| Ok(repository_with_branches(count)));
+            });
     }
 
     fn to_urls(repository_url_strings: Vec<&str>) -> Vec<RepositoryUrlDto> {
@@ -123,20 +155,22 @@ mod tests {
 
     #[async_std::test]
     async fn counts_branches_in_list_of_repositories() {
-        let mut mock_branch_counter_service = mock_branch_counter_service();
-        prepare_mock_branch_counter_service(
-            &mut mock_branch_counter_service,
+        let branch_counter_service = BranchCounterServiceImpl::new();
+        let mock_github_authentication_service = MockGitHubAuthenticationService::default();
+        let mut mock_github_repository_provider = MockRepositoryProvider::default();
+        prepare_mock_repository_provider(
+            &mut mock_github_repository_provider,
             vec![
                 (RepositoryUrl::new("1".to_string()), 1),
                 (RepositoryUrl::new("2".to_string()), 2),
             ],
         );
-        let mock_github_authentication_service = MockGitHubAuthenticationService::default();
 
         assert_that(
             &under_test(
-                mock_branch_counter_service,
+                branch_counter_service,
                 mock_github_authentication_service,
+                mock_github_repository_provider,
             )
             .count_branches_in_repositories(to_urls(vec!["1", "2"]))
             .await
@@ -151,7 +185,8 @@ mod tests {
     #[async_std::test]
     async fn authenticates_with_github() {
         let github_credentials = CliGitHubAuthenticationToken::new("credentials".to_string());
-        let mock_branch_counter_service = mock_branch_counter_service();
+        let branch_counter_service = BranchCounterServiceImpl::new();
+        let mock_github_repository_provider = MockRepositoryProvider::default();
         let mut mock_github_authentication_service = MockGitHubAuthenticationService::default();
         mock_github_authentication_service
             .expect_authenticate()
@@ -162,8 +197,9 @@ mod tests {
 
         assert_that(
             &under_test(
-                mock_branch_counter_service,
+                branch_counter_service,
                 mock_github_authentication_service,
+                mock_github_repository_provider,
             )
             .authenticate_app_with_github(github_credentials)
             .await,
@@ -174,29 +210,29 @@ mod tests {
     #[async_std::test]
     async fn fails_to_authenticate_with_github_when_persistence_fails() {
         let github_credentials = CliGitHubAuthenticationToken::new("credentials".to_string());
-        let mock_branch_counter_service = mock_branch_counter_service();
+        let branch_counter_service = BranchCounterServiceImpl::new();
+        let mock_github_repository_provider = MockRepositoryProvider::default();
         let mut mock_github_authentication_service = MockGitHubAuthenticationService::default();
         mock_github_authentication_service
             .expect_authenticate()
             .with(eq(DomainCliGitHubAuthenticationToken::new(
                 "credentials".to_string(),
             )))
-            .returning(|_| {
-                Err(AuthenticationError::PersistenceError(
-                    AuthenticationPersistenceError::TestVariant,
-                ))
-            });
+            .returning(|_| Err(AuthenticationError::Persistence));
 
         let result = under_test(
-            mock_branch_counter_service,
+            branch_counter_service,
             mock_github_authentication_service,
+            mock_github_repository_provider,
         )
         .authenticate_app_with_github(github_credentials)
         .await;
 
         assert_that(&matches!(
             result.err().unwrap(),
-            ApplicationError::Domain(DomainError::Authentication(AuthenticationError::PersistenceError {..}))
+            ApplicationError::Domain(DomainError::Authentication(
+                AuthenticationError::Persistence
+            ))
         ))
         .is_true();
     }

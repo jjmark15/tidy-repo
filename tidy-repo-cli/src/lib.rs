@@ -1,11 +1,13 @@
 use ports::cli::commands::CliCommand;
 use ports::cli::ClientOptions;
 
+use crate::application::repository::RepositoryProviderError;
 use crate::application::ApplicationService;
 use crate::cli_results::CountBranchesResult;
 use crate::domain::authentication::AuthenticationService;
 use crate::domain::authentication::GitHubAuthenticationToken as DomainCliGitHubAuthenticationToken;
 use crate::domain::count_branches::BranchCounterService;
+use crate::domain::repository::RepositoryProvider;
 use crate::ports::cli::GitHubAuthenticationToken;
 
 pub mod application;
@@ -14,25 +16,27 @@ pub mod domain;
 pub mod ports;
 pub mod utils;
 
-pub struct TidyRepoClient<CO, BranchCounter, GAS>
+pub struct TidyRepoClient<CO, BranchCounter, GAS, GRP>
 where
     CO: ClientOptions,
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
+    GRP: RepositoryProvider<Error = RepositoryProviderError>,
 {
     client_options: CO,
-    application_service: ApplicationService<BranchCounter, GAS>,
+    application_service: ApplicationService<BranchCounter, GAS, GRP>,
 }
 
-impl<CO, BranchCounter, GAS> TidyRepoClient<CO, BranchCounter, GAS>
+impl<CO, BranchCounter, GAS, GRP> TidyRepoClient<CO, BranchCounter, GAS, GRP>
 where
     CO: ClientOptions,
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
+    GRP: RepositoryProvider<Error = RepositoryProviderError>,
 {
     pub fn new(
         client_options: CO,
-        application_service: ApplicationService<BranchCounter, GAS>,
+        application_service: ApplicationService<BranchCounter, GAS, GRP>,
     ) -> Self {
         TidyRepoClient {
             client_options,
