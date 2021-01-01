@@ -1,6 +1,6 @@
 use crate::domain::value_object::ValueObject;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct RepositoryUrl(String);
 
 impl ValueObject<String> for RepositoryUrl {

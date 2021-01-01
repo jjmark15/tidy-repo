@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use futures::future::try_join_all;
-
 use crate::application::{ApplicationError, RepositoryUrlDto};
 use crate::domain::authentication::AuthenticationService;
 use crate::domain::authentication::GitHubAuthenticationToken as DomainCliGitHubAuthenticationToken;
 use crate::domain::count_branches::BranchCounterService;
 use crate::domain::error::DomainError;
+use crate::domain::repository::RepositoryUrl;
 use crate::ports::cli::GitHubAuthenticationToken as CliGitHubAuthenticationToken;
 
 pub struct ApplicationService<BranchCounter, GAS>
@@ -35,13 +34,17 @@ where
         &self,
         repository_urls: Vec<RepositoryUrlDto>,
     ) -> Result<HashMap<RepositoryUrlDto, u32>, ApplicationError> {
+        let domain_repository_urls: Vec<RepositoryUrl> = repository_urls
+            .iter()
+            .map(|url| url.clone().into())
+            .collect();
+
         Ok(HashMap::from_iter(
-            try_join_all(
-                repository_urls
-                    .iter()
-                    .map(|url| self.join_url_with_count(url.clone())),
-            )
-            .await?,
+            self.branch_counter_service
+                .count_branches_in_repositories(domain_repository_urls)
+                .await?
+                .iter()
+                .map(|(url, count)| (RepositoryUrlDto::from(url.clone()), *count)),
         ))
     }
 
@@ -56,17 +59,6 @@ where
             .await
             .map_err(DomainError::from)
             .map_err(ApplicationError::from)
-    }
-
-    async fn join_url_with_count(
-        &self,
-        url: RepositoryUrlDto,
-    ) -> Result<(RepositoryUrlDto, u32), DomainError> {
-        let count = self
-            .branch_counter_service
-            .count_branches(url.clone().into())
-            .await?;
-        Ok((url, count))
     }
 }
 
@@ -98,17 +90,20 @@ mod tests {
 
     fn prepare_mock_branch_counter_service(
         mock_branch_counter_service: &mut MockBranchCounterService,
-        url: RepositoryUrl,
-        count: u32,
+        urls_and_counts: Vec<(RepositoryUrl, u32)>,
     ) {
         async fn async_this<T>(arg: T) -> T {
             arg
         }
+        let result: HashMap<RepositoryUrl, u32> = HashMap::from_iter(urls_and_counts.clone());
 
         mock_branch_counter_service
-            .expect_count_branches()
-            .with(eq(url))
-            .returning(move |_| Box::pin(async_this(Ok(count))));
+            .expect_count_branches_in_repositories()
+            .with(eq(urls_and_counts
+                .iter()
+                .map(|(url, _count)| url.clone())
+                .collect::<Vec<RepositoryUrl>>()))
+            .returning(move |_| Box::pin(async_this(Ok(result.clone()))));
     }
 
     fn to_urls(repository_url_strings: Vec<&str>) -> Vec<RepositoryUrlDto> {
@@ -131,13 +126,10 @@ mod tests {
         let mut mock_branch_counter_service = mock_branch_counter_service();
         prepare_mock_branch_counter_service(
             &mut mock_branch_counter_service,
-            RepositoryUrl::new("1".to_string()),
-            1,
-        );
-        prepare_mock_branch_counter_service(
-            &mut mock_branch_counter_service,
-            RepositoryUrl::new("2".to_string()),
-            2,
+            vec![
+                (RepositoryUrl::new("1".to_string()), 1),
+                (RepositoryUrl::new("2".to_string()), 2),
+            ],
         );
         let mock_github_authentication_service = MockGitHubAuthenticationService::default();
 

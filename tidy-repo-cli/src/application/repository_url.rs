@@ -5,6 +5,7 @@ use std::str::FromStr;
 use serde::export::Formatter;
 
 use crate::domain::repository::RepositoryUrl;
+use crate::domain::value_object::ValueObject;
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct RepositoryUrlDto(String);
@@ -30,6 +31,12 @@ impl FromStr for RepositoryUrlDto {
 impl Into<RepositoryUrl> for RepositoryUrlDto {
     fn into(self) -> RepositoryUrl {
         RepositoryUrl::new(self.0)
+    }
+}
+
+impl From<RepositoryUrl> for RepositoryUrlDto {
+    fn from(url: RepositoryUrl) -> Self {
+        RepositoryUrlDto::new(url.value())
     }
 }
 
