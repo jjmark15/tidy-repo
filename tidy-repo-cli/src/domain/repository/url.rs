@@ -4,8 +4,8 @@ use crate::domain::value_object::ValueObject;
 pub struct RepositoryUrl(String);
 
 impl ValueObject<String> for RepositoryUrl {
-    fn value(&self) -> String {
-        self.0.clone()
+    fn value(&self) -> &String {
+        &self.0
     }
 }
 

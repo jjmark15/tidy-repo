@@ -12,8 +12,8 @@ impl Branch {
 }
 
 impl ValueObject<String> for Branch {
-    fn value(&self) -> String {
-        self.name.clone()
+    fn value(&self) -> &String {
+        &self.name
     }
 }
 

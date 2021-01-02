@@ -67,7 +67,7 @@ where
     type Error = RepositoryProviderError;
 
     async fn get_repository(&self, url: &RepositoryUrl) -> Result<Repository, Self::Error> {
-        let url_dto = RepositoryUrlDto::new(url.value());
+        let url_dto = RepositoryUrlDto::new(url.value().clone());
         let branches = self
             .github_client
             .list_branches(&url_dto)

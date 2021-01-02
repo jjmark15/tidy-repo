@@ -36,7 +36,7 @@ impl Into<RepositoryUrl> for RepositoryUrlDto {
 
 impl From<RepositoryUrl> for RepositoryUrlDto {
     fn from(url: RepositoryUrl) -> Self {
-        RepositoryUrlDto::new(url.value())
+        RepositoryUrlDto::new(url.value().clone())
     }
 }
 

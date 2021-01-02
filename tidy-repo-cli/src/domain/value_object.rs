@@ -1,3 +1,3 @@
 pub trait ValueObject<T> {
-    fn value(&self) -> T;
+    fn value(&self) -> &T;
 }
