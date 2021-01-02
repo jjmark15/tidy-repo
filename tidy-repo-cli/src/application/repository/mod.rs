@@ -2,9 +2,7 @@ pub use branch::*;
 pub use github_repository_provider::*;
 pub use repository_url::*;
 
-use crate::ports::repository_hosting::adapters::github::{
-    GitHubClientError, RepositoryUrlParseError,
-};
+use crate::ports::repository_hosting::github::{GitHubClientError, RepositoryUrlParseError};
 
 mod branch;
 mod github_repository_provider;

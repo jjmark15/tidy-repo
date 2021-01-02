@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::domain::authentication::GitHubAuthenticationToken;
 use crate::ports::persistence::GitHubAuthenticationToken as PersistenceGitHubAuthenticationToken;
-use crate::ports::repository_hosting::adapters::github::GitHubAuthenticationToken as RepositoryHostingGitHubAuthenticationToken;
+use crate::ports::repository_hosting::github::GitHubAuthenticationToken as RepositoryHostingGitHubAuthenticationToken;
 
 impl From<PersistenceGitHubAuthenticationToken> for GitHubAuthenticationToken {
     fn from(token: PersistenceGitHubAuthenticationToken) -> Self {

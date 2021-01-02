@@ -6,7 +6,7 @@ use crate::domain::authentication::GitHubAuthenticationToken;
 use crate::domain::repository::Branch;
 use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
 use crate::domain::value_object::ValueObject;
-use crate::ports::repository_hosting::adapters::github::{
+use crate::ports::repository_hosting::github::{
     GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken, GitHubClientError,
 };
 use crate::ports::repository_hosting::RepositoryHostClient;
@@ -86,7 +86,7 @@ mod tests {
 
     use crate::application::repository::BranchNameDto;
     use crate::domain::authentication::persistence::MockPersistAuthentication;
-    use crate::ports::repository_hosting::adapters::github::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
+    use crate::ports::repository_hosting::github::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
     use crate::ports::repository_hosting::MockRepositoryHostClient;
 
     use super::*;

@@ -1,7 +1,7 @@
 use async_std::fs::File;
 use async_std::path::{Path, PathBuf};
 
-use crate::ports::persistence::adapters::filesystem::FileSystemPersistenceError;
+use crate::ports::persistence::filesystem::FileSystemPersistenceError;
 use crate::ports::persistence::{Credentials, Persist, PersistenceError};
 use crate::utils::environment::EnvironmentReader;
 

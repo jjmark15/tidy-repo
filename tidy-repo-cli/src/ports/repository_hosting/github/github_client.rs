@@ -5,13 +5,11 @@ use http_types::headers::HeaderName;
 use http_types::{Method, Url};
 
 use crate::application::repository::{BranchNameDto, RepositoryUrlDto};
-use crate::ports::repository_hosting::adapters::github::parse_repository_url::GitHubRepositoryUrlParser;
-use crate::ports::repository_hosting::adapters::github::responses::ListBranchesResponseBody;
-use crate::ports::repository_hosting::adapters::github::{
+use crate::ports::repository_hosting::github::{
+    parse_repository_url::GitHubRepositoryUrlParser, responses::ListBranchesResponseBody,
     GitHubAuthenticationToken, GitHubClientError,
 };
-use crate::ports::repository_hosting::ports::RepositoryHostClient;
-use crate::ports::repository_hosting::AuthenticationCredentialValidity;
+use crate::ports::repository_hosting::{AuthenticationCredentialValidity, RepositoryHostClient};
 use crate::utils::environment::EnvironmentReader;
 use crate::utils::http::{HttpClientFacade, Request};
 
@@ -173,11 +171,9 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::ports::repository_hosting::adapters::github::parse_repository_url::MockGitHubRepositoryUrlParser;
-    use crate::ports::repository_hosting::adapters::github::repository::GitHubRepository;
-    use crate::ports::repository_hosting::adapters::github::responses::{
-        Branch, ListBranchesResponseBody,
-    };
+    use crate::ports::repository_hosting::github::repository::GitHubRepository;
+    use crate::ports::repository_hosting::github::responses::Branch;
+    use crate::ports::repository_hosting::github::MockGitHubRepositoryUrlParser;
     use crate::utils::environment::{EnvironmentReaderError, MockEnvironmentReader};
     use crate::utils::http::{Error, MockHttpClientFacade, Request, Response};
 
