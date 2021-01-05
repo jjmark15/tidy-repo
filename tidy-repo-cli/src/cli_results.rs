@@ -31,19 +31,16 @@ impl From<HashMap<RepositoryUrlDto, u32>> for CountBranchesResult {
 
 #[cfg(test)]
 mod tests {
-    use std::iter::FromIterator;
-
     use spectral::prelude::*;
 
     use super::*;
 
     fn count_branches_result<S: AsRef<str>>(hash_map: HashMap<S, u32>) -> CountBranchesResult {
         CountBranchesResult {
-            hash_map: HashMap::from_iter(
-                hash_map
-                    .iter()
-                    .map(|(url, &count)| (RepositoryUrlDto::new(url.as_ref().to_string()), count)),
-            ),
+            hash_map: hash_map
+                .iter()
+                .map(|(url, &count)| (RepositoryUrlDto::new(url.as_ref().to_string()), count))
+                .collect(),
         }
     }
 

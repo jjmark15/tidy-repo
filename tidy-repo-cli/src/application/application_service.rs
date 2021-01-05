@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::iter::FromIterator;
 
 use futures::future::try_join_all;
 
@@ -64,12 +63,12 @@ where
     ) -> Result<HashMap<RepositoryUrlDto, u32>, ApplicationError> {
         let repositories = self.get_repositories(repository_urls).await?;
 
-        Ok(HashMap::from_iter(
-            self.branch_counter_service
-                .count_branches_in_repositories(repositories)
-                .iter()
-                .map(|(repository, count)| (repository.url().clone().into(), *count)),
-        ))
+        Ok(self
+            .branch_counter_service
+            .count_branches_in_repositories(repositories)
+            .iter()
+            .map(|(repository, count)| (repository.url().clone().into(), *count))
+            .collect())
     }
 
     pub async fn authenticate_app_with_github(
