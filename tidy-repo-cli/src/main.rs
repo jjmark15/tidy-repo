@@ -1,13 +1,14 @@
 use structopt::StructOpt;
 
 use tidy_repo::application::{
-    repository::GitHubRepositoryProvider, ApplicationService,
-    FilesystemAuthenticationPersistenceService, GitHubAuthenticationValidator,
+    repository::GitHubRepositoryProvider, ApplicationService, GitHubAuthenticationValidator,
 };
-use tidy_repo::domain::authentication::{GitHubAuthenticationService, GitHubAuthenticationToken};
+use tidy_repo::domain::authentication::GitHubAuthenticationService;
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
 use tidy_repo::ports::cli::structopt::StructOptClientOptions;
-use tidy_repo::ports::persistence::filesystem::CredentialsFileSystemPersistenceService;
+use tidy_repo::ports::persistence::filesystem::{
+    FileSystemCredentialsPersistence, FilesystemAuthenticationPersistenceService,
+};
 use tidy_repo::ports::repository_hosting::github::{GitHubClient, GitHubRepositoryUrlParserImpl};
 use tidy_repo::utils::environment::EnvironmentReaderStd;
 use tidy_repo::utils::http::HttpClientFacadeImpl;
@@ -20,8 +21,7 @@ type GitHubAuthenticationServiceAlias = GitHubAuthenticationService<
     FilesystemAuthenticationPersistenceServiceAlias,
 >;
 type FilesystemAuthenticationPersistenceServiceAlias = FilesystemAuthenticationPersistenceService<
-    GitHubAuthenticationToken,
-    CredentialsFileSystemPersistenceService<EnvironmentReaderStd>,
+    FileSystemCredentialsPersistence<EnvironmentReaderStd>,
 >;
 
 #[async_std::main]
@@ -39,7 +39,7 @@ fn github_client() -> GitHubClientAlias {
 }
 
 fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceServiceAlias {
-    FilesystemAuthenticationPersistenceService::new(CredentialsFileSystemPersistenceService::new(
+    FilesystemAuthenticationPersistenceService::new(FileSystemCredentialsPersistence::new(
         EnvironmentReaderStd::new(),
     ))
 }

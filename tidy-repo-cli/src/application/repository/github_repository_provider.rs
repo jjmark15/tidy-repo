@@ -2,7 +2,6 @@ use serde::export::PhantomData;
 
 use crate::application::repository::{RepositoryProviderError, RepositoryUrlDto};
 use crate::domain::authentication::persistence::PersistAuthentication;
-use crate::domain::authentication::GitHubAuthenticationToken;
 use crate::domain::repository::Branch;
 use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
 use crate::domain::value_object::ValueObject;
@@ -18,7 +17,7 @@ where
         Err = GitHubClientError,
         AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
     >,
-    AuthPersistence: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken>,
+    AuthPersistence: PersistAuthentication,
 {
     github_client: GC,
     authentication_persistence_type_marker: PhantomData<AuthPersistence>,
@@ -30,7 +29,7 @@ where
         Err = GitHubClientError,
         AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
     >,
-    AuthPersistence: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken>,
+    AuthPersistence: PersistAuthentication,
 {
     pub fn new(mut github_client: GC, authentication_persistence_service: AuthPersistence) -> Self {
         Self::authenticate_github_client(&mut github_client, &authentication_persistence_service);
@@ -61,8 +60,7 @@ where
             AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
         > + Sync
         + Send,
-    AuthPersistence:
-        PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken> + Sync + Send,
+    AuthPersistence: PersistAuthentication + Sync + Send,
 {
     type Error = RepositoryProviderError;
 
@@ -86,6 +84,7 @@ mod tests {
 
     use crate::application::repository::BranchNameDto;
     use crate::domain::authentication::persistence::MockPersistAuthentication;
+    use crate::domain::authentication::GitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
     use crate::ports::repository_hosting::MockRepositoryHostClient;
 
@@ -93,7 +92,7 @@ mod tests {
 
     type MockRepositoryHostClientAlias =
         MockRepositoryHostClient<GitHubClientError, RepositoryClientGitHubAuthenticationToken>;
-    type MockPersistAuthenticationAlias = MockPersistAuthentication<GitHubAuthenticationToken, ()>;
+    type MockPersistAuthenticationAlias = MockPersistAuthentication<()>;
 
     fn under_test(
         repository_host_client: MockRepositoryHostClientAlias,

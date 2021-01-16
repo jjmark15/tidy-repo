@@ -9,13 +9,13 @@ const HOME_ENVIRONMENT_VARIABLE: &str = "TIDY_REPO_HOME";
 const CREDENTIALS_FILE_NAME: &str = "credentials.yml";
 
 #[derive(Debug, Default)]
-pub struct CredentialsFileSystemPersistenceService<E: EnvironmentReader> {
+pub struct FileSystemCredentialsPersistence<E: EnvironmentReader> {
     environment_reader: E,
 }
 
-impl<E: EnvironmentReader> CredentialsFileSystemPersistenceService<E> {
+impl<E: EnvironmentReader> FileSystemCredentialsPersistence<E> {
     pub fn new(environment_reader: E) -> Self {
-        CredentialsFileSystemPersistenceService { environment_reader }
+        FileSystemCredentialsPersistence { environment_reader }
     }
 
     async fn create_file_if_does_not_exist(
@@ -63,7 +63,7 @@ impl<E: EnvironmentReader> CredentialsFileSystemPersistenceService<E> {
 }
 
 #[async_trait::async_trait]
-impl<E> Persist for CredentialsFileSystemPersistenceService<E>
+impl<E> Persist for FileSystemCredentialsPersistence<E>
 where
     E: EnvironmentReader + Send + Sync,
 {
@@ -97,8 +97,8 @@ mod tests {
 
     fn under_test(
         environment_reader: MockEnvironmentReader,
-    ) -> CredentialsFileSystemPersistenceService<MockEnvironmentReader> {
-        CredentialsFileSystemPersistenceService::new(environment_reader)
+    ) -> FileSystemCredentialsPersistence<MockEnvironmentReader> {
+        FileSystemCredentialsPersistence::new(environment_reader)
     }
 
     async fn read_credentials_file_contents(p: &Path) -> Result<Credentials, std::io::Error> {

@@ -11,7 +11,7 @@ use crate::domain::authentication::{
 pub struct GitHubAuthenticationService<AV, PA>
 where
     AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>,
-    PA: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken>,
+    PA: PersistAuthentication,
 {
     authentication_validator: AV,
     authentication_persistence: PA,
@@ -20,7 +20,7 @@ where
 impl<AV, PA> GitHubAuthenticationService<AV, PA>
 where
     AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>,
-    PA: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken>,
+    PA: PersistAuthentication,
 {
     pub fn new(authentication_validator: AV, authentication_persistence: PA) -> Self {
         GitHubAuthenticationService {
@@ -36,7 +36,7 @@ where
     AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>
         + Send
         + Sync,
-    PA: PersistAuthentication<AuthenticationCredentials = GitHubAuthenticationToken> + Send + Sync,
+    PA: PersistAuthentication + Send + Sync,
 {
     type AuthenticationCredentials = GitHubAuthenticationToken;
 
@@ -83,7 +83,7 @@ mod tests {
 
     type MockRepositoryAuthenticationValidatorAlias =
         MockRepositoryAuthenticationValidator<GitHubAuthenticationToken, ()>;
-    type MockPersistAuthenticationAlias = MockPersistAuthentication<GitHubAuthenticationToken, ()>;
+    type MockPersistAuthenticationAlias = MockPersistAuthentication<()>;
 
     fn under_test(
         authentication_validator: MockRepositoryAuthenticationValidatorAlias,

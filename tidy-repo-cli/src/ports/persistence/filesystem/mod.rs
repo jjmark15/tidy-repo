@@ -1,5 +1,7 @@
+pub use authentication_persistence_adapter::*;
+pub use credentials_persistence::*;
 pub use error::*;
-pub use github_credentials::*;
 
+mod authentication_persistence_adapter;
+mod credentials_persistence;
 mod error;
-mod github_credentials;

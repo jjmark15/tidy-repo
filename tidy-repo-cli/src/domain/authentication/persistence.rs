@@ -1,34 +1,34 @@
 use async_trait::async_trait;
 
+use crate::domain::authentication::GitHubAuthenticationToken;
+
 #[async_trait]
 pub trait PersistAuthentication {
-    type AuthenticationCredentials;
     type Err;
 
     async fn persist_credentials(
         &self,
-        credentials: Self::AuthenticationCredentials,
+        credentials: GitHubAuthenticationToken,
     ) -> Result<(), Self::Err>;
 
-    async fn credentials(&self) -> Result<Self::AuthenticationCredentials, Self::Err>;
+    async fn credentials(&self) -> Result<GitHubAuthenticationToken, Self::Err>;
 }
 
 #[cfg(test)]
 mockall::mock! {
-    pub PersistAuthentication<AC: 'static + Send + Sync, Err: 'static + Send + Sync> {}
+    pub PersistAuthentication<Err: 'static + Send + Sync> {}
 
     #[async_trait::async_trait]
     pub trait PersistAuthentication {
-        type AuthenticationCredentials = AC;
         type Err = Err;
 
         async fn persist_credentials(
             &self,
-            credentials: AC,
+            credentials: GitHubAuthenticationToken,
         ) -> Result<(), Err>;
 
         async fn credentials(
             &self,
-        ) -> Result<AC, Err>;
+        ) -> Result<GitHubAuthenticationToken, Err>;
     }
 }
