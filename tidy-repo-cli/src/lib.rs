@@ -1,7 +1,6 @@
 use ports::cli::commands::CliCommand;
 use ports::cli::ClientOptions;
 
-use crate::application::repository::RepositoryProviderError;
 use crate::application::ApplicationService;
 use crate::cli_results::CountBranchesResult;
 use crate::domain::authentication::AuthenticationService;
@@ -21,7 +20,7 @@ where
     CO: ClientOptions,
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
-    GRP: RepositoryProvider<Error = RepositoryProviderError>,
+    GRP: RepositoryProvider,
 {
     client_options: CO,
     application_service: ApplicationService<BranchCounter, GAS, GRP>,
@@ -32,7 +31,7 @@ where
     CO: ClientOptions,
     BranchCounter: BranchCounterService,
     GAS: AuthenticationService<AuthenticationCredentials = DomainCliGitHubAuthenticationToken>,
-    GRP: RepositoryProvider<Error = RepositoryProviderError>,
+    GRP: RepositoryProvider,
 {
     pub fn new(
         client_options: CO,

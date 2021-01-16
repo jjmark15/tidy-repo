@@ -1,9 +1,9 @@
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct BranchNameDto(String);
+pub struct BranchName(String);
 
-impl BranchNameDto {
+impl BranchName {
     pub fn new(value: String) -> Self {
-        BranchNameDto(value)
+        BranchName(value)
     }
 
     pub fn value(&self) -> &String {
@@ -19,7 +19,7 @@ mod tests {
 
     #[test]
     fn returns_value() {
-        assert_that(&BranchNameDto("branch name".to_string()).value())
+        assert_that(&BranchName("branch name".to_string()).value())
             .is_equal_to(&"branch name".to_string());
     }
 }

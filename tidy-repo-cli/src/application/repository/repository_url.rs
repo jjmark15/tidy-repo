@@ -1,8 +1,6 @@
 use std::convert::Infallible;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-
-use serde::export::Formatter;
 
 use crate::domain::repository::RepositoryUrl;
 use crate::domain::value_object::ValueObject;

@@ -10,7 +10,7 @@ use crate::domain::authentication::{
 #[derive(Debug, Default)]
 pub struct GitHubAuthenticationService<AV, PA>
 where
-    AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>,
+    AV: RepositoryAuthenticationValidator,
     PA: PersistAuthentication,
 {
     authentication_validator: AV,
@@ -19,7 +19,7 @@ where
 
 impl<AV, PA> GitHubAuthenticationService<AV, PA>
 where
-    AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>,
+    AV: RepositoryAuthenticationValidator,
     PA: PersistAuthentication,
 {
     pub fn new(authentication_validator: AV, authentication_persistence: PA) -> Self {
@@ -33,9 +33,7 @@ where
 #[async_trait]
 impl<AV, PA> AuthenticationService for GitHubAuthenticationService<AV, PA>
 where
-    AV: RepositoryAuthenticationValidator<AuthenticationCredentials = GitHubAuthenticationToken>
-        + Send
-        + Sync,
+    AV: RepositoryAuthenticationValidator + Send + Sync,
     PA: PersistAuthentication + Send + Sync,
 {
     type AuthenticationCredentials = GitHubAuthenticationToken;
@@ -81,8 +79,7 @@ mod tests {
 
     use super::*;
 
-    type MockRepositoryAuthenticationValidatorAlias =
-        MockRepositoryAuthenticationValidator<GitHubAuthenticationToken, ()>;
+    type MockRepositoryAuthenticationValidatorAlias = MockRepositoryAuthenticationValidator<()>;
     type MockPersistAuthenticationAlias = MockPersistAuthentication<()>;
 
     fn under_test(

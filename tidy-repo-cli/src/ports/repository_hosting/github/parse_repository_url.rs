@@ -2,12 +2,11 @@ use std::convert::{TryFrom, TryInto};
 
 use regex::Regex;
 
-use crate::application::repository::RepositoryUrlDto;
-use crate::ports::repository_hosting::github::repository::GitHubRepository;
+use crate::ports::repository_hosting::github::repository::{GitHubRepository, RepositoryUrl};
 
 #[cfg_attr(test, mockall::automock)]
 pub trait GitHubRepositoryUrlParser {
-    fn parse(&self, url: RepositoryUrlDto) -> Result<GitHubRepository, RepositoryUrlParseError>;
+    fn parse(&self, url: RepositoryUrl) -> Result<GitHubRepository, RepositoryUrlParseError>;
 }
 
 #[derive(Debug, Default)]
@@ -20,15 +19,15 @@ impl GitHubRepositoryUrlParserImpl {
 }
 
 impl GitHubRepositoryUrlParser for GitHubRepositoryUrlParserImpl {
-    fn parse(&self, url: RepositoryUrlDto) -> Result<GitHubRepository, RepositoryUrlParseError> {
+    fn parse(&self, url: RepositoryUrl) -> Result<GitHubRepository, RepositoryUrlParseError> {
         url.try_into()
     }
 }
 
-impl TryFrom<RepositoryUrlDto> for GitHubRepository {
+impl TryFrom<RepositoryUrl> for GitHubRepository {
     type Error = RepositoryUrlParseError;
 
-    fn try_from(url: RepositoryUrlDto) -> Result<Self, Self::Error> {
+    fn try_from(url: RepositoryUrl) -> Result<Self, Self::Error> {
         let re = Regex::new(r"^(?:https?://)?github\.com/(?P<owner>\S+)/(?P<name>\S+)$").unwrap();
 
         if let Some(captures) = re.captures(url.value()) {
@@ -58,7 +57,7 @@ mod tests {
 
     #[test]
     fn parses_github_repository_url_with_tls() {
-        let url = RepositoryUrlDto::new("https://github.com/owner/repo".to_string());
+        let url = RepositoryUrl::new("https://github.com/owner/repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         assert_that(&under_test.parse(url).unwrap()).is_equal_to(GitHubRepository::new(
             "owner".to_string(),
@@ -68,7 +67,7 @@ mod tests {
 
     #[test]
     fn parses_github_repository_url_without_tls() {
-        let url = RepositoryUrlDto::new("http://github.com/owner/repo".to_string());
+        let url = RepositoryUrl::new("http://github.com/owner/repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         assert_that(&under_test.parse(url).unwrap()).is_equal_to(GitHubRepository::new(
             "owner".to_string(),
@@ -78,7 +77,7 @@ mod tests {
 
     #[test]
     fn parses_github_repository_url_without_scheme() {
-        let url = RepositoryUrlDto::new("github.com/owner/repo".to_string());
+        let url = RepositoryUrl::new("github.com/owner/repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         assert_that(&under_test.parse(url).unwrap()).is_equal_to(GitHubRepository::new(
             "owner".to_string(),
@@ -88,7 +87,7 @@ mod tests {
 
     #[test]
     fn fails_to_parse_github_repository_url_missing_owner() {
-        let url = RepositoryUrlDto::new("https://github.com//repo".to_string());
+        let url = RepositoryUrl::new("https://github.com//repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         let result = under_test.parse(url);
         assert_that(&matches!(result.err().unwrap(), RepositoryUrlParseError {..})).is_true();
@@ -96,7 +95,7 @@ mod tests {
 
     #[test]
     fn fails_to_parse_github_repository_url_missing_repo_name() {
-        let url = RepositoryUrlDto::new("https://github.com/owner".to_string());
+        let url = RepositoryUrl::new("https://github.com/owner".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         let result = under_test.parse(url);
         assert_that(&matches!(result.err().unwrap(), RepositoryUrlParseError {..})).is_true();
@@ -104,7 +103,7 @@ mod tests {
 
     #[test]
     fn fails_to_parse_github_repository_url_with_non_github_base_url() {
-        let url = RepositoryUrlDto::new("https://not-github.com/owner/repo".to_string());
+        let url = RepositoryUrl::new("https://not-github.com/owner/repo".to_string());
         let under_test = GitHubRepositoryUrlParserImpl::new();
         let result = under_test.parse(url);
         assert_that(&matches!(result.err().unwrap(), RepositoryUrlParseError {..})).is_true();

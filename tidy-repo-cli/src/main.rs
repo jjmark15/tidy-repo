@@ -1,15 +1,16 @@
 use structopt::StructOpt;
 
-use tidy_repo::application::{
-    repository::GitHubRepositoryProvider, ApplicationService, GitHubAuthenticationValidator,
-};
+use tidy_repo::application::ApplicationService;
 use tidy_repo::domain::authentication::GitHubAuthenticationService;
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
 use tidy_repo::ports::cli::structopt::StructOptClientOptions;
 use tidy_repo::ports::persistence::filesystem::{
     FileSystemCredentialsPersistence, FilesystemAuthenticationPersistenceService,
 };
-use tidy_repo::ports::repository_hosting::github::{GitHubClient, GitHubRepositoryUrlParserImpl};
+use tidy_repo::ports::repository_hosting::github::{
+    GitHubAuthenticationValidatorAdapter, GitHubClient, GitHubRepositoryProviderAdapter,
+    GitHubRepositoryUrlParserImpl,
+};
 use tidy_repo::utils::environment::EnvironmentReaderStd;
 use tidy_repo::utils::http::HttpClientFacadeImpl;
 use tidy_repo::TidyRepoClient;
@@ -17,7 +18,7 @@ use tidy_repo::TidyRepoClient;
 type GitHubClientAlias =
     GitHubClient<HttpClientFacadeImpl, GitHubRepositoryUrlParserImpl, EnvironmentReaderStd>;
 type GitHubAuthenticationServiceAlias = GitHubAuthenticationService<
-    GitHubAuthenticationValidator<GitHubClientAlias>,
+    GitHubAuthenticationValidatorAdapter<GitHubClientAlias>,
     FilesystemAuthenticationPersistenceServiceAlias,
 >;
 type FilesystemAuthenticationPersistenceServiceAlias = FilesystemAuthenticationPersistenceService<
@@ -46,7 +47,7 @@ fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceSe
 
 fn github_authentication_service() -> GitHubAuthenticationServiceAlias {
     GitHubAuthenticationService::new(
-        GitHubAuthenticationValidator::new(github_client()),
+        GitHubAuthenticationValidatorAdapter::new(github_client()),
         authentication_persistence_service(),
     )
 }
@@ -54,10 +55,13 @@ fn github_authentication_service() -> GitHubAuthenticationServiceAlias {
 fn application_service() -> ApplicationService<
     BranchCounterServiceImpl,
     GitHubAuthenticationServiceAlias,
-    GitHubRepositoryProvider<GitHubClientAlias, FilesystemAuthenticationPersistenceServiceAlias>,
+    GitHubRepositoryProviderAdapter<
+        GitHubClientAlias,
+        FilesystemAuthenticationPersistenceServiceAlias,
+    >,
 > {
     let github_repository_provider =
-        GitHubRepositoryProvider::new(github_client(), authentication_persistence_service());
+        GitHubRepositoryProviderAdapter::new(github_client(), authentication_persistence_service());
     let branch_counter_service = BranchCounterServiceImpl::new();
     ApplicationService::new(
         branch_counter_service,

@@ -1,26 +1,26 @@
+use crate::domain::authentication::GitHubAuthenticationToken;
+
 #[async_trait::async_trait]
 pub trait RepositoryAuthenticationValidator {
-    type AuthenticationCredentials;
     type Err;
 
     async fn validate_authentication_credentials(
         &self,
-        credentials: Self::AuthenticationCredentials,
+        credentials: GitHubAuthenticationToken,
     ) -> Result<AuthenticationValidity, Self::Err>;
 }
 
 #[cfg(test)]
 mockall::mock! {
-    pub RepositoryAuthenticationValidator<C: 'static + Send + Sync, Err: 'static + Send + Sync> {}
+    pub RepositoryAuthenticationValidator<Err: 'static + Send + Sync> {}
 
     #[async_trait::async_trait]
     trait RepositoryAuthenticationValidator {
-        type AuthenticationCredentials = C;
         type Err = Err;
 
         async fn validate_authentication_credentials(
             &self,
-            credentials: C,
+            credentials: GitHubAuthenticationToken,
         ) -> Result<AuthenticationValidity, Err>;
     }
 }

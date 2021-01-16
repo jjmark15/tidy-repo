@@ -1,20 +1,22 @@
 use crate::domain::repository::{Repository, RepositoryUrl};
 
 #[async_trait::async_trait]
+#[cfg_attr(test, mockall::automock)]
 pub trait RepositoryProvider {
-    type Error;
-
-    async fn get_repository(&self, url: &RepositoryUrl) -> Result<Repository, Self::Error>;
+    async fn get_repository(
+        &self,
+        url: &RepositoryUrl,
+    ) -> Result<Repository, RepositoryProviderError>;
 }
 
-#[cfg(test)]
-mockall::mock! {
-    pub RepositoryProvider<Err: 'static + Send + Sync> {}
+#[derive(Debug, thiserror::Error)]
+#[error("{msg}")]
+pub struct RepositoryProviderError {
+    msg: String,
+}
 
-    #[async_trait::async_trait]
-    trait RepositoryProvider {
-        type Error = Err;
-
-        async fn get_repository(&self, url: &RepositoryUrl) -> Result<Repository, Err>;
+impl RepositoryProviderError {
+    pub fn new(msg: String) -> Self {
+        RepositoryProviderError { msg }
     }
 }

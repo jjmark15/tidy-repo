@@ -1,3 +1,9 @@
+pub use branch::*;
+pub use url::*;
+
+mod branch;
+mod url;
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct GitHubRepository {
     owner: String,

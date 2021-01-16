@@ -1,17 +1,17 @@
 use serde::export::PhantomData;
 
-use crate::application::repository::{RepositoryProviderError, RepositoryUrlDto};
 use crate::domain::authentication::persistence::PersistAuthentication;
-use crate::domain::repository::Branch;
+use crate::domain::repository::{Branch, RepositoryProviderError};
 use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
 use crate::domain::value_object::ValueObject;
+use crate::ports::repository_hosting::github::repository::RepositoryUrl as RepositoryClientRepositoryUrl;
 use crate::ports::repository_hosting::github::{
     GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken, GitHubClientError,
+    RepositoryHostClient, RepositoryUrlParseError,
 };
-use crate::ports::repository_hosting::RepositoryHostClient;
 
 #[derive(Default)]
-pub struct GitHubRepositoryProvider<GC, AuthPersistence>
+pub struct GitHubRepositoryProviderAdapter<GC, AuthPersistence>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
@@ -23,7 +23,7 @@ where
     authentication_persistence_type_marker: PhantomData<AuthPersistence>,
 }
 
-impl<GC, AuthPersistence> GitHubRepositoryProvider<GC, AuthPersistence>
+impl<GC, AuthPersistence> GitHubRepositoryProviderAdapter<GC, AuthPersistence>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
@@ -34,7 +34,7 @@ where
     pub fn new(mut github_client: GC, authentication_persistence_service: AuthPersistence) -> Self {
         Self::authenticate_github_client(&mut github_client, &authentication_persistence_service);
 
-        GitHubRepositoryProvider {
+        GitHubRepositoryProviderAdapter {
             github_client,
             authentication_persistence_type_marker: PhantomData::default(),
         }
@@ -47,13 +47,16 @@ where
         if let Ok(credentials) =
             async_std::task::block_on(authentication_persistence_service.credentials())
         {
-            github_client.set_authentication_credentials(credentials.into());
+            github_client.set_authentication_credentials(
+                RepositoryClientGitHubAuthenticationToken::new(credentials.value()),
+            );
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<GC, AuthPersistence> RepositoryProvider for GitHubRepositoryProvider<GC, AuthPersistence>
+impl<GC, AuthPersistence> RepositoryProvider
+    for GitHubRepositoryProviderAdapter<GC, AuthPersistence>
 where
     GC: RepositoryHostClient<
             Err = GitHubClientError,
@@ -62,18 +65,55 @@ where
         + Send,
     AuthPersistence: PersistAuthentication + Sync + Send,
 {
-    type Error = RepositoryProviderError;
-
-    async fn get_repository(&self, url: &RepositoryUrl) -> Result<Repository, Self::Error> {
-        let url_dto = RepositoryUrlDto::new(url.value().clone());
+    async fn get_repository(
+        &self,
+        url: &RepositoryUrl,
+    ) -> Result<Repository, RepositoryProviderError> {
+        let url_dto = RepositoryClientRepositoryUrl::new(url.value().clone());
         let branches = self
             .github_client
             .list_branches(&url_dto)
-            .await?
+            .await
+            .map_err(|err| RepositoryProviderError::from(GitHubRepositoryProviderError::from(err)))?
             .iter()
             .map(|branch_dto| Branch::new(branch_dto.value().clone()))
             .collect();
         Ok(Repository::new(url.clone(), branches))
+    }
+}
+
+impl From<GitHubClientError> for GitHubRepositoryProviderError {
+    fn from(client_error: GitHubClientError) -> Self {
+        match client_error {
+            GitHubClientError::ApiUrlParseError(..)
+            | GitHubClientError::HttpClientError(..)
+            | GitHubClientError::Unexpected
+            | GitHubClientError::JsonDeserializationError(..) => {
+                GitHubRepositoryProviderError::GitHubClient(client_error)
+            }
+            GitHubClientError::RepositoryNotFound(url) => {
+                GitHubRepositoryProviderError::RepositoryNotFound(url)
+            }
+            GitHubClientError::RepositoryUrlParseError(parse_error) => {
+                GitHubRepositoryProviderError::InvalidUrl(parse_error)
+            }
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum GitHubRepositoryProviderError {
+    #[error("GitHub client error occurred ({0})")]
+    GitHubClient(GitHubClientError),
+    #[error(transparent)]
+    InvalidUrl(RepositoryUrlParseError),
+    #[error("repository '{0}' not found")]
+    RepositoryNotFound(RepositoryClientRepositoryUrl),
+}
+
+impl From<GitHubRepositoryProviderError> for RepositoryProviderError {
+    fn from(port_error: GitHubRepositoryProviderError) -> Self {
+        RepositoryProviderError::new(format!("{}", port_error))
     }
 }
 
@@ -82,11 +122,11 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::application::repository::BranchNameDto;
     use crate::domain::authentication::persistence::MockPersistAuthentication;
     use crate::domain::authentication::GitHubAuthenticationToken;
+    use crate::ports::repository_hosting::github::repository::BranchName;
     use crate::ports::repository_hosting::github::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
-    use crate::ports::repository_hosting::MockRepositoryHostClient;
+    use crate::ports::repository_hosting::github::MockRepositoryHostClient;
 
     use super::*;
 
@@ -97,15 +137,20 @@ mod tests {
     fn under_test(
         repository_host_client: MockRepositoryHostClientAlias,
         authentication_persistence_service: MockPersistAuthenticationAlias,
-    ) -> GitHubRepositoryProvider<MockRepositoryHostClientAlias, MockPersistAuthenticationAlias>
-    {
-        GitHubRepositoryProvider::new(repository_host_client, authentication_persistence_service)
+    ) -> GitHubRepositoryProviderAdapter<
+        MockRepositoryHostClientAlias,
+        MockPersistAuthenticationAlias,
+    > {
+        GitHubRepositoryProviderAdapter::new(
+            repository_host_client,
+            authentication_persistence_service,
+        )
     }
 
     fn prepare_mock_client_list_branches(
         mock_repository_host: &mut MockRepositoryHostClientAlias,
-        url: RepositoryUrlDto,
-        branches: Vec<BranchNameDto>,
+        url: RepositoryClientRepositoryUrl,
+        branches: Vec<BranchName>,
     ) {
         mock_repository_host
             .expect_list_branches()
@@ -150,8 +195,8 @@ mod tests {
         );
         prepare_mock_client_list_branches(
             &mut mock_repository_host_client,
-            RepositoryUrlDto::new("url".to_string()),
-            vec![BranchNameDto::new("1".to_string())],
+            RepositoryClientRepositoryUrl::new("url".to_string()),
+            vec![BranchName::new("1".to_string())],
         );
 
         assert_that(

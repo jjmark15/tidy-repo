@@ -4,14 +4,55 @@ use async_trait::async_trait;
 use http_types::headers::HeaderName;
 use http_types::{Method, Url};
 
-use crate::application::repository::{BranchNameDto, RepositoryUrlDto};
+use crate::ports::repository_hosting::github::repository::{BranchName, RepositoryUrl};
 use crate::ports::repository_hosting::github::{
     parse_repository_url::GitHubRepositoryUrlParser, responses::ListBranchesResponseBody,
     GitHubAuthenticationToken, GitHubClientError,
 };
-use crate::ports::repository_hosting::{AuthenticationCredentialValidity, RepositoryHostClient};
+use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 use crate::utils::environment::EnvironmentReader;
 use crate::utils::http::{HttpClientFacade, Request};
+
+#[async_trait]
+pub trait RepositoryHostClient {
+    type Err;
+    type AuthenticationCredentials;
+
+    async fn list_branches(
+        &self,
+        repository_url: &RepositoryUrl,
+    ) -> Result<Vec<BranchName>, Self::Err>;
+
+    fn set_authentication_credentials(&mut self, credentials: Self::AuthenticationCredentials);
+
+    async fn validate_authentication_credentials(
+        &self,
+        credentials: Self::AuthenticationCredentials,
+    ) -> Result<AuthenticationCredentialValidity, Self::Err>;
+}
+
+#[cfg(test)]
+mockall::mock! {
+    pub RepositoryHostClient<Err: 'static + Send + Sync, C: 'static + Send + Sync> {}
+
+    #[async_trait::async_trait]
+    trait RepositoryHostClient {
+        type Err = Err;
+        type AuthenticationCredentials = C;
+
+        async fn list_branches(
+            &self,
+            repository_url: &RepositoryUrl,
+        ) -> Result<Vec<BranchName>, Err>;
+
+        fn set_authentication_credentials(&mut self, credentials: C);
+
+        async fn validate_authentication_credentials(
+            &self,
+            credentials: C,
+        ) -> Result<AuthenticationCredentialValidity, Err>;
+    }
+}
 
 #[derive(Debug)]
 pub struct GitHubClient<
@@ -111,8 +152,8 @@ where
 
     async fn list_branches(
         &self,
-        repository_url: &RepositoryUrlDto,
-    ) -> Result<Vec<BranchNameDto>, Self::Err> {
+        repository_url: &RepositoryUrl,
+    ) -> Result<Vec<BranchName>, Self::Err> {
         let repository = self.url_parser.parse(repository_url.clone())?;
 
         let response = self
@@ -129,7 +170,7 @@ where
                 .body_json::<ListBranchesResponseBody>()?
                 .branches()
                 .iter()
-                .map(|branch| BranchNameDto::new(branch.name().to_string()))
+                .map(|branch| BranchName::new(branch.name().to_string()))
                 .collect()),
             _ => Err(GitHubClientError::RepositoryNotFound(
                 repository_url.clone(),
@@ -323,7 +364,7 @@ mod tests {
         let mut mock_url_parser = mock_repository_url_parser();
         mock_url_parser
             .expect_parse()
-            .with(eq(RepositoryUrlDto::new(
+            .with(eq(RepositoryUrl::new(
                 "https://github.com/owner/repo".to_string(),
             )))
             .returning(|_| {
@@ -338,13 +379,13 @@ mod tests {
 
         assert_that(
             &under_test
-                .list_branches(&RepositoryUrlDto::new(
+                .list_branches(&RepositoryUrl::new(
                     "https://github.com/owner/repo".to_string(),
                 ))
                 .await
                 .unwrap(),
         )
-        .is_equal_to(&vec![BranchNameDto::new("branch".to_string())]);
+        .is_equal_to(&vec![BranchName::new("branch".to_string())]);
     }
 
     #[async_std::test]
@@ -364,7 +405,7 @@ mod tests {
         let mut mock_url_parser = mock_repository_url_parser();
         mock_url_parser
             .expect_parse()
-            .with(eq(RepositoryUrlDto::new(
+            .with(eq(RepositoryUrl::new(
                 "https://github.com/owner/repo".to_string(),
             )))
             .returning(|_| {
@@ -381,13 +422,13 @@ mod tests {
 
         assert_that(
             &under_test
-                .list_branches(&RepositoryUrlDto::new(
+                .list_branches(&RepositoryUrl::new(
                     "https://github.com/owner/repo".to_string(),
                 ))
                 .await
                 .unwrap(),
         )
-        .is_equal_to(&vec![BranchNameDto::new("branch".to_string())]);
+        .is_equal_to(&vec![BranchName::new("branch".to_string())]);
     }
 
     #[async_std::test]

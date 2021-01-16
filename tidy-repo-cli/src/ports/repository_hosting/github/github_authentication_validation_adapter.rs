@@ -3,10 +3,11 @@ use crate::domain::authentication::{
 };
 use crate::ports::repository_hosting::github::{
     GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken, GitHubClientError,
+    RepositoryHostClient,
 };
-use crate::ports::repository_hosting::{AuthenticationCredentialValidity, RepositoryHostClient};
+use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 
-pub struct GitHubAuthenticationValidator<GC>
+pub struct GitHubAuthenticationValidatorAdapter<GC>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
@@ -16,7 +17,7 @@ where
     github_client: GC,
 }
 
-impl<GC> GitHubAuthenticationValidator<GC>
+impl<GC> GitHubAuthenticationValidatorAdapter<GC>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
@@ -24,12 +25,12 @@ where
     >,
 {
     pub fn new(github_client: GC) -> Self {
-        GitHubAuthenticationValidator { github_client }
+        GitHubAuthenticationValidatorAdapter { github_client }
     }
 }
 
 #[async_trait::async_trait]
-impl<GC> RepositoryAuthenticationValidator for GitHubAuthenticationValidator<GC>
+impl<GC> RepositoryAuthenticationValidator for GitHubAuthenticationValidatorAdapter<GC>
 where
     GC: RepositoryHostClient<
             Err = GitHubClientError,
@@ -37,16 +38,17 @@ where
         > + Send
         + Sync,
 {
-    type AuthenticationCredentials = GitHubAuthenticationToken;
     type Err = GitHubClientError;
 
     async fn validate_authentication_credentials(
         &self,
-        credentials: Self::AuthenticationCredentials,
+        credentials: GitHubAuthenticationToken,
     ) -> Result<AuthenticationValidity, Self::Err> {
         let validity = match self
             .github_client
-            .validate_authentication_credentials(credentials.into())
+            .validate_authentication_credentials(RepositoryClientGitHubAuthenticationToken::new(
+                credentials.value(),
+            ))
             .await?
         {
             AuthenticationCredentialValidity::Valid => AuthenticationValidity::Valid,
@@ -62,7 +64,7 @@ mod tests {
     use spectral::prelude::*;
 
     use crate::ports::repository_hosting::github::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
-    use crate::ports::repository_hosting::MockRepositoryHostClient;
+    use crate::ports::repository_hosting::github::MockRepositoryHostClient;
 
     use super::*;
 
@@ -71,8 +73,8 @@ mod tests {
 
     fn under_test(
         github_client: MockRepositoryHostClientAlias,
-    ) -> GitHubAuthenticationValidator<MockRepositoryHostClientAlias> {
-        GitHubAuthenticationValidator::new(github_client)
+    ) -> GitHubAuthenticationValidatorAdapter<MockRepositoryHostClientAlias> {
+        GitHubAuthenticationValidatorAdapter::new(github_client)
     }
 
     fn prepare_mock_client_validate_authentication_credentials(
