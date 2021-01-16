@@ -3,7 +3,9 @@ use structopt::StructOpt;
 use tidy_repo::application::ApplicationService;
 use tidy_repo::domain::authentication::GitHubAuthenticationService;
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
-use tidy_repo::ports::cli::structopt::StructOptClientOptions;
+use tidy_repo::ports::initiation::terminal_client::{
+    StructOptClientOptions, TerminalClientTidyRepoAppAdapter,
+};
 use tidy_repo::ports::persistence::filesystem::{
     FileSystemCredentialsPersistence, FilesystemAuthenticationPersistenceService,
 };
@@ -13,7 +15,7 @@ use tidy_repo::ports::repository_hosting::github::{
 };
 use tidy_repo::utils::environment::EnvironmentReaderStd;
 use tidy_repo::utils::http::HttpClientFacadeImpl;
-use tidy_repo::TidyRepoClient;
+use tidy_repo::TidyRepoApp;
 
 type GitHubClientAlias =
     GitHubClient<HttpClientFacadeImpl, GitHubRepositoryUrlParserImpl, EnvironmentReaderStd>;
@@ -27,10 +29,12 @@ type FilesystemAuthenticationPersistenceServiceAlias = FilesystemAuthenticationP
 
 #[async_std::main]
 async fn main() {
+    tidy_repo_app().run().await;
+}
+
+fn tidy_repo_app() -> impl TidyRepoApp {
     let client_options = StructOptClientOptions::from_args();
-    TidyRepoClient::new(client_options, application_service())
-        .run()
-        .await;
+    TerminalClientTidyRepoAppAdapter::new(client_options, application_service())
 }
 
 fn github_client() -> GitHubClientAlias {

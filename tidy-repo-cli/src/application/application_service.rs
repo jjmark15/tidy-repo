@@ -7,7 +7,6 @@ use crate::domain::authentication::{AuthenticationService, GitHubAuthenticationT
 use crate::domain::count_branches::BranchCounterService;
 use crate::domain::error::DomainError;
 use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
-use crate::ports::cli::GitHubAuthenticationToken as CliGitHubAuthenticationToken;
 
 pub struct ApplicationService<BranchCounter, GAS, GRP>
 where
@@ -72,12 +71,10 @@ where
 
     pub async fn authenticate_app_with_github(
         &self,
-        github_token: CliGitHubAuthenticationToken,
+        github_token: String,
     ) -> Result<(), ApplicationError> {
         self.github_authentication_service
-            .authenticate(GitHubAuthenticationToken::new(
-                github_token.value().to_string(),
-            ))
+            .authenticate(GitHubAuthenticationToken::new(github_token))
             .await
             .map_err(DomainError::from)
             .map_err(ApplicationError::from)
@@ -178,7 +175,6 @@ mod tests {
 
     #[async_std::test]
     async fn authenticates_with_github() {
-        let github_credentials = CliGitHubAuthenticationToken::new("credentials".to_string());
         let branch_counter_service = BranchCounterServiceImpl::new();
         let mock_github_repository_provider = MockRepositoryProvider::default();
         let mut mock_github_authentication_service = MockGitHubAuthenticationService::default();
@@ -195,7 +191,7 @@ mod tests {
                 mock_github_authentication_service,
                 mock_github_repository_provider,
             )
-            .authenticate_app_with_github(github_credentials)
+            .authenticate_app_with_github("credentials".to_string())
             .await,
         )
         .is_ok();
@@ -203,7 +199,6 @@ mod tests {
 
     #[async_std::test]
     async fn fails_to_authenticate_with_github_when_persistence_fails() {
-        let github_credentials = CliGitHubAuthenticationToken::new("credentials".to_string());
         let branch_counter_service = BranchCounterServiceImpl::new();
         let mock_github_repository_provider = MockRepositoryProvider::default();
         let mut mock_github_authentication_service = MockGitHubAuthenticationService::default();
@@ -219,7 +214,7 @@ mod tests {
             mock_github_authentication_service,
             mock_github_repository_provider,
         )
-        .authenticate_app_with_github(github_credentials)
+        .authenticate_app_with_github("credentials".to_string())
         .await;
 
         assert_that(&matches!(

@@ -1,9 +1,16 @@
 use structopt::StructOpt;
 
 use crate::application::repository::RepositoryUrlDto;
-use crate::ports::cli::commands::CliCommand;
-use crate::ports::cli::ClientOptions;
-use crate::ports::cli::GitHubAuthenticationToken;
+use crate::ports::initiation::terminal_client::commands::CliCommand;
+use crate::ports::initiation::terminal_client::github_token::GitHubAuthenticationToken;
+
+pub trait ClientOptions {
+    fn command(&self) -> CliCommand;
+
+    fn repository_urls(&self) -> Option<&Vec<RepositoryUrlDto>>;
+
+    fn github_auth_token(&self) -> Option<GitHubAuthenticationToken>;
+}
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Tidy Repo")]
