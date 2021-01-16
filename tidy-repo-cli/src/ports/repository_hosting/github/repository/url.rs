@@ -1,4 +1,4 @@
-use serde::export::Formatter;
+use std::fmt::Formatter;
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct RepositoryUrl(String);

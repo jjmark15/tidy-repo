@@ -1,4 +1,4 @@
-use serde::export::PhantomData;
+use std::marker::PhantomData;
 
 use crate::domain::authentication::persistence::PersistAuthentication;
 use crate::domain::repository::{Branch, RepositoryProviderError};
