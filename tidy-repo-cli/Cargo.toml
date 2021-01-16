@@ -21,7 +21,7 @@ thiserror = "1.0"
 [dev-dependencies]
 assert_cmd = "1.0"
 assert_fs = "1.0"
-mockall = "0.8"
+mockall = "0.9"
 mockito = "0.28"
 predicates = "1.0"
 spectral = "0.6"

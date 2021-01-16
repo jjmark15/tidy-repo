@@ -15,7 +15,7 @@ mockall::mock! {
     pub RepositoryAuthenticationValidator<Err: 'static + Send + Sync> {}
 
     #[async_trait::async_trait]
-    trait RepositoryAuthenticationValidator {
+    impl<Err: 'static + Send + Sync> RepositoryAuthenticationValidator for RepositoryAuthenticationValidator<Err> {
         type Err = Err;
 
         async fn validate_authentication_credentials(

@@ -19,7 +19,7 @@ mockall::mock! {
     pub PersistAuthentication<Err: 'static + Send + Sync> {}
 
     #[async_trait::async_trait]
-    pub trait PersistAuthentication {
+    impl<Err: 'static + Send + Sync> PersistAuthentication for PersistAuthentication<Err> {
         type Err = Err;
 
         async fn persist_credentials(

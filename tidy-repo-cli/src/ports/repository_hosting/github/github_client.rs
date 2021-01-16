@@ -36,7 +36,7 @@ mockall::mock! {
     pub RepositoryHostClient<Err: 'static + Send + Sync, C: 'static + Send + Sync> {}
 
     #[async_trait::async_trait]
-    trait RepositoryHostClient {
+    impl<Err: 'static + Send + Sync, C: 'static + Send + Sync> RepositoryHostClient for RepositoryClient<Err, C> {
         type Err = Err;
         type AuthenticationCredentials = C;
 

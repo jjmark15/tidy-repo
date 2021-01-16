@@ -28,7 +28,7 @@ mockall::mock! {
     pub AuthenticationService<AC: 'static + Sync + Send> {}
 
     #[async_trait]
-    pub trait AuthenticationService {
+    impl<AC: 'static + Sync + Send> AuthenticationService for AuthenticationService<AC> {
         type AuthenticationCredentials = AC;
 
         async fn authenticate(
