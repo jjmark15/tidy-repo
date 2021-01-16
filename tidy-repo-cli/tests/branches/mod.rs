@@ -31,7 +31,7 @@ pub(crate) fn mock_github_api_server_for_successful_list_branches(
 }
 
 pub(crate) fn count_results_with_header<S: AsRef<str>>(count_results: S) -> String {
-    format!("# Repository Branch Counts\n\n{}", count_results.as_ref())
+    count_results.as_ref().to_string()
 }
 
 pub(crate) fn branches_command(temp_home_directory: &Path) -> Command {
