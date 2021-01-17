@@ -4,12 +4,13 @@ use async_trait::async_trait;
 use http_types::headers::HeaderName;
 use http_types::{Method, Url};
 
+use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken;
+use crate::ports::repository_hosting::github::error::GitHubClientError;
 use crate::ports::repository_hosting::github::repository::{BranchName, RepositoryUrl};
 use crate::ports::repository_hosting::github::{
     parse_repository_url::GitHubRepositoryUrlParser, responses::ListBranchesResponseBody,
-    GitHubAuthenticationToken, GitHubClientError,
+    AuthenticationCredentialValidity,
 };
-use crate::ports::repository_hosting::AuthenticationCredentialValidity;
 use crate::utils::environment::EnvironmentReader;
 use crate::utils::http::{HttpClientFacade, Request};
 

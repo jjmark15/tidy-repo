@@ -1,11 +1,9 @@
 use crate::domain::authentication::{
     AuthenticationValidity, GitHubAuthenticationToken, RepositoryAuthenticationValidator,
 };
-use crate::ports::repository_hosting::github::{
-    GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken, GitHubClientError,
-    RepositoryHostClient,
-};
-use crate::ports::repository_hosting::AuthenticationCredentialValidity;
+use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
+use crate::ports::repository_hosting::github::error::GitHubClientError;
+use crate::ports::repository_hosting::github::RepositoryHostClient;
 
 pub struct GitHubAuthenticationValidatorAdapter<GC>
 where
@@ -58,12 +56,18 @@ where
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum AuthenticationCredentialValidity {
+    Valid,
+    Invalid,
+}
+
 #[cfg(test)]
 mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::ports::repository_hosting::github::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
+    use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::MockRepositoryHostClient;
 
     use super::*;

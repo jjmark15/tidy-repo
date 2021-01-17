@@ -1,5 +1,5 @@
-pub use credentials::*;
-pub use error::*;
+use crate::ports::persistence::credentials::Credentials;
+use crate::ports::persistence::error::PersistenceError;
 
 mod credentials;
 mod error;
