@@ -3,20 +3,20 @@ use crate::domain::authentication::GitHubAuthenticationToken;
 use crate::ports::persistence::{Credentials, Persist, PersistenceError};
 
 #[derive(Default)]
-pub struct FilesystemAuthenticationPersistenceService<P: Persist> {
+pub struct FilesystemAuthenticationPersistenceAdapter<P: Persist> {
     persistence_service: P,
 }
 
-impl<P: Persist> FilesystemAuthenticationPersistenceService<P> {
+impl<P: Persist> FilesystemAuthenticationPersistenceAdapter<P> {
     pub fn new(persistence_service: P) -> Self {
-        FilesystemAuthenticationPersistenceService {
+        FilesystemAuthenticationPersistenceAdapter {
             persistence_service,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<P> PersistAuthentication for FilesystemAuthenticationPersistenceService<P>
+impl<P> PersistAuthentication for FilesystemAuthenticationPersistenceAdapter<P>
 where
     P: Persist + Sync + Send,
 {
@@ -56,8 +56,8 @@ mod tests {
 
     fn under_test(
         persistence_service: MockPersist,
-    ) -> FilesystemAuthenticationPersistenceService<MockPersist> {
-        FilesystemAuthenticationPersistenceService::new(persistence_service)
+    ) -> FilesystemAuthenticationPersistenceAdapter<MockPersist> {
+        FilesystemAuthenticationPersistenceAdapter::new(persistence_service)
     }
 
     #[derive(Debug, Eq, PartialEq)]
