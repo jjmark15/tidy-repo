@@ -1,31 +1,28 @@
-use crate::domain::authentication::persistence::PersistAuthentication;
+use crate::domain::authentication::persistence::CredentialRepository;
 use crate::domain::authentication::GitHubAuthenticationToken;
 use crate::ports::persistence::{Credentials, Persist, PersistenceError};
 
 #[derive(Default)]
-pub struct FilesystemAuthenticationPersistenceAdapter<P: Persist> {
+pub struct FilesystemCredentialRepositoryAdapter<P: Persist> {
     persistence_service: P,
 }
 
-impl<P: Persist> FilesystemAuthenticationPersistenceAdapter<P> {
+impl<P: Persist> FilesystemCredentialRepositoryAdapter<P> {
     pub fn new(persistence_service: P) -> Self {
-        FilesystemAuthenticationPersistenceAdapter {
+        FilesystemCredentialRepositoryAdapter {
             persistence_service,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<P> PersistAuthentication for FilesystemAuthenticationPersistenceAdapter<P>
+impl<P> CredentialRepository for FilesystemCredentialRepositoryAdapter<P>
 where
     P: Persist + Sync + Send,
 {
     type Err = PersistenceError;
 
-    async fn persist_credentials(
-        &self,
-        credentials: GitHubAuthenticationToken,
-    ) -> Result<(), Self::Err> {
+    async fn store(&self, credentials: GitHubAuthenticationToken) -> Result<(), Self::Err> {
         let credentials_at_rest = Credentials::new(credentials.value());
         self.persistence_service
             .store(credentials_at_rest)
@@ -33,9 +30,9 @@ where
             .map_err(Into::into)
     }
 
-    async fn credentials(&self) -> Result<GitHubAuthenticationToken, Self::Err> {
+    async fn get(&self) -> Result<GitHubAuthenticationToken, Self::Err> {
         self.persistence_service
-            .load()
+            .get()
             .await
             .map_err(Into::into)
             .map(|credentials_at_rest| {
@@ -56,8 +53,8 @@ mod tests {
 
     fn under_test(
         persistence_service: MockPersist,
-    ) -> FilesystemAuthenticationPersistenceAdapter<MockPersist> {
-        FilesystemAuthenticationPersistenceAdapter::new(persistence_service)
+    ) -> FilesystemCredentialRepositoryAdapter<MockPersist> {
+        FilesystemCredentialRepositoryAdapter::new(persistence_service)
     }
 
     #[derive(Debug, Eq, PartialEq)]
@@ -76,7 +73,7 @@ mod tests {
 
         assert_that(
             &under_test(mock_persistence_service)
-                .persist_credentials(GitHubAuthenticationToken::new("credentials".to_string()))
+                .store(GitHubAuthenticationToken::new("credentials".to_string()))
                 .await,
         )
         .is_ok();
@@ -86,16 +83,11 @@ mod tests {
     async fn returns_persisted_credentials() {
         let mut mock_persistence_service = MockPersist::default();
         mock_persistence_service
-            .expect_load()
+            .expect_get()
             .times(1)
             .returning(|| Ok(Credentials::new("credentials".to_string())));
 
-        assert_that(
-            &under_test(mock_persistence_service)
-                .credentials()
-                .await
-                .unwrap(),
-        )
-        .is_equal_to(&GitHubAuthenticationToken::new("credentials".to_string()));
+        assert_that(&under_test(mock_persistence_service).get().await.unwrap())
+            .is_equal_to(&GitHubAuthenticationToken::new("credentials".to_string()));
     }
 }

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::domain::authentication::persistence::PersistAuthentication;
+use crate::domain::authentication::persistence::CredentialRepository;
 use crate::domain::repository::{Branch, RepositoryProviderError};
 use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
 use crate::domain::value_object::ValueObject;
@@ -18,7 +18,7 @@ where
         Err = GitHubClientError,
         AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
     >,
-    AuthPersistence: PersistAuthentication,
+    AuthPersistence: CredentialRepository,
 {
     github_client: GC,
     authentication_persistence_type_marker: PhantomData<AuthPersistence>,
@@ -30,7 +30,7 @@ where
         Err = GitHubClientError,
         AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
     >,
-    AuthPersistence: PersistAuthentication,
+    AuthPersistence: CredentialRepository,
 {
     pub fn new(mut github_client: GC, authentication_persistence_service: AuthPersistence) -> Self {
         Self::authenticate_github_client(&mut github_client, &authentication_persistence_service);
@@ -45,8 +45,7 @@ where
         github_client: &mut GC,
         authentication_persistence_service: &AuthPersistence,
     ) {
-        if let Ok(credentials) =
-            async_std::task::block_on(authentication_persistence_service.credentials())
+        if let Ok(credentials) = async_std::task::block_on(authentication_persistence_service.get())
         {
             github_client.set_authentication_credentials(
                 RepositoryClientGitHubAuthenticationToken::new(credentials.value()),
@@ -64,7 +63,7 @@ where
             AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
         > + Sync
         + Send,
-    AuthPersistence: PersistAuthentication + Sync + Send,
+    AuthPersistence: CredentialRepository + Sync + Send,
 {
     async fn get_repository(
         &self,
@@ -123,7 +122,7 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::MockPersistAuthentication;
+    use crate::domain::authentication::persistence::MockCredentialRepository;
     use crate::domain::authentication::GitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::repository::BranchName;
@@ -133,15 +132,13 @@ mod tests {
 
     type MockRepositoryHostClientAlias =
         MockRepositoryHostClient<GitHubClientError, RepositoryClientGitHubAuthenticationToken>;
-    type MockPersistAuthenticationAlias = MockPersistAuthentication<()>;
+    type MockCredentialRepositoryAlias = MockCredentialRepository<()>;
 
     fn under_test(
         repository_host_client: MockRepositoryHostClientAlias,
-        authentication_persistence_service: MockPersistAuthenticationAlias,
-    ) -> GitHubRepositoryProviderAdapter<
-        MockRepositoryHostClientAlias,
-        MockPersistAuthenticationAlias,
-    > {
+        authentication_persistence_service: MockCredentialRepositoryAlias,
+    ) -> GitHubRepositoryProviderAdapter<MockRepositoryHostClientAlias, MockCredentialRepositoryAlias>
+    {
         GitHubRepositoryProviderAdapter::new(
             repository_host_client,
             authentication_persistence_service,
@@ -170,30 +167,28 @@ mod tests {
             .return_const(());
     }
 
-    fn prepare_mock_authentication_persistence_service_to_fail(
-        mock_authentication_persistence_service: &mut MockPersistAuthenticationAlias,
+    fn prepare_mock_credential_repository_to_fail(
+        mock_authentication_persistence_service: &mut MockCredentialRepositoryAlias,
     ) {
         mock_authentication_persistence_service
-            .expect_credentials()
+            .expect_get()
             .returning(|| Err(()));
     }
 
-    fn prepare_mock_authentication_persistence_service_to_succeed(
-        mock_authentication_persistence_service: &mut MockPersistAuthenticationAlias,
+    fn prepare_mock_credential_repository_to_succeed(
+        mock_credential_repository: &mut MockCredentialRepositoryAlias,
         credentials: GitHubAuthenticationToken,
     ) {
-        mock_authentication_persistence_service
-            .expect_credentials()
+        mock_credential_repository
+            .expect_get()
             .returning(move || Ok(credentials.clone()));
     }
 
     #[async_std::test]
     async fn gets_repository_given_valid_url_and_no_credentials_available() {
         let mut mock_repository_host_client = MockRepositoryHostClient::default();
-        let mut mock_authentication_persistence_service = MockPersistAuthenticationAlias::default();
-        prepare_mock_authentication_persistence_service_to_fail(
-            &mut mock_authentication_persistence_service,
-        );
+        let mut mock_credential_repository = MockCredentialRepositoryAlias::default();
+        prepare_mock_credential_repository_to_fail(&mut mock_credential_repository);
         prepare_mock_client_list_branches(
             &mut mock_repository_host_client,
             RepositoryClientRepositoryUrl::new("url".to_string()),
@@ -201,13 +196,10 @@ mod tests {
         );
 
         assert_that(
-            &under_test(
-                mock_repository_host_client,
-                mock_authentication_persistence_service,
-            )
-            .get_repository(&RepositoryUrl::new("url".to_string()))
-            .await
-            .unwrap(),
+            &under_test(mock_repository_host_client, mock_credential_repository)
+                .get_repository(&RepositoryUrl::new("url".to_string()))
+                .await
+                .unwrap(),
         )
         .is_equal_to(&Repository::new(
             RepositoryUrl::new("url".to_string()),
@@ -218,19 +210,16 @@ mod tests {
     #[async_std::test]
     async fn authenticates_client_when_credentials_are_available() {
         let mut mock_repository_host_client = MockRepositoryHostClient::default();
-        let mut mock_authentication_persistence_service = MockPersistAuthenticationAlias::default();
+        let mut mock_credential_repository = MockCredentialRepositoryAlias::default();
         prepare_mock_client_set_authentication(
             &mut mock_repository_host_client,
             RepositoryClientGitHubAuthenticationToken::new("token".to_string()),
         );
-        prepare_mock_authentication_persistence_service_to_succeed(
-            &mut mock_authentication_persistence_service,
+        prepare_mock_credential_repository_to_succeed(
+            &mut mock_credential_repository,
             GitHubAuthenticationToken::new("token".to_string()),
         );
 
-        under_test(
-            mock_repository_host_client,
-            mock_authentication_persistence_service,
-        );
+        under_test(mock_repository_host_client, mock_credential_repository);
     }
 }

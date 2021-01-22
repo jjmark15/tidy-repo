@@ -1,7 +1,7 @@
-pub use authentication_persistence_adapter::*;
+pub use credential_repository_adapter::*;
 pub use credentials_persistence::*;
 pub use error::*;
 
-mod authentication_persistence_adapter;
+mod credential_repository_adapter;
 mod credentials_persistence;
 mod error;

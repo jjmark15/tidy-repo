@@ -67,7 +67,7 @@ impl<E> Persist for FileSystemCredentialsPersistence<E>
 where
     E: EnvironmentReader + Send + Sync,
 {
-    async fn load(&self) -> Result<Credentials, PersistenceError> {
+    async fn get(&self) -> Result<Credentials, PersistenceError> {
         let path: PathBuf = self.credentials_file_path()?;
         let file_contents = self.read_from_file(path.as_path()).await?;
         self.deserialize_data(file_contents)
@@ -171,7 +171,7 @@ mod tests {
             mock_environment_reader(temp_directory_path.to_str().unwrap().to_string());
         write_credentials_to_file(credentials_file_path.path(), credentials).await;
 
-        assert_that(&under_test(mock_environment_reader).load().await.unwrap())
+        assert_that(&under_test(mock_environment_reader).get().await.unwrap())
             .is_equal_to(Credentials::new("token".parse().unwrap()));
         temp_directory.close().unwrap();
     }
@@ -183,7 +183,7 @@ mod tests {
         let mock_environment_reader =
             mock_environment_reader(temp_directory_path.to_str().unwrap().to_string());
 
-        let result = under_test(mock_environment_reader).load().await;
+        let result = under_test(mock_environment_reader).get().await;
 
         assert_that(&matches!(result.err().unwrap(), PersistenceError::FileSystemPersistence {..}))
             .is_true();
