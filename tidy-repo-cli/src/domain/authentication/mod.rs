@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 
-pub use authenticator::*;
 pub use github_authentication_service::*;
 pub use github_token::*;
+pub use validator::*;
 
-mod authenticator;
 mod github_authentication_service;
 mod github_token;
 pub mod persistence;
+mod validator;
 
 #[async_trait]
 pub trait AuthenticationService {

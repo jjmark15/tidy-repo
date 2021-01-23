@@ -1,11 +1,11 @@
 use crate::domain::authentication::{
-    AuthenticationValidity, GitHubAuthenticationToken, RepositoryAuthenticationValidator,
+    AuthenticationValidity, GitHubAuthenticationToken, RepositoryCredentialsValidator,
 };
 use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
 use crate::ports::repository_hosting::github::error::GitHubClientError;
 use crate::ports::repository_hosting::github::RepositoryHostClient;
 
-pub struct GitHubAuthenticationValidatorAdapter<GC>
+pub struct GitHubCredentialsValidatorAdapter<GC>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
@@ -15,7 +15,7 @@ where
     github_client: GC,
 }
 
-impl<GC> GitHubAuthenticationValidatorAdapter<GC>
+impl<GC> GitHubCredentialsValidatorAdapter<GC>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
@@ -23,12 +23,12 @@ where
     >,
 {
     pub fn new(github_client: GC) -> Self {
-        GitHubAuthenticationValidatorAdapter { github_client }
+        GitHubCredentialsValidatorAdapter { github_client }
     }
 }
 
 #[async_trait::async_trait]
-impl<GC> RepositoryAuthenticationValidator for GitHubAuthenticationValidatorAdapter<GC>
+impl<GC> RepositoryCredentialsValidator for GitHubCredentialsValidatorAdapter<GC>
 where
     GC: RepositoryHostClient<
             Err = GitHubClientError,
@@ -38,7 +38,7 @@ where
 {
     type Err = GitHubClientError;
 
-    async fn validate_authentication_credentials(
+    async fn validate(
         &self,
         credentials: GitHubAuthenticationToken,
     ) -> Result<AuthenticationValidity, Self::Err> {
@@ -77,8 +77,8 @@ mod tests {
 
     fn under_test(
         github_client: MockRepositoryHostClientAlias,
-    ) -> GitHubAuthenticationValidatorAdapter<MockRepositoryHostClientAlias> {
-        GitHubAuthenticationValidatorAdapter::new(github_client)
+    ) -> GitHubCredentialsValidatorAdapter<MockRepositoryHostClientAlias> {
+        GitHubCredentialsValidatorAdapter::new(github_client)
     }
 
     fn prepare_mock_client_validate_authentication_credentials(
@@ -102,9 +102,7 @@ mod tests {
         );
 
         let validity = under_test(mock_github_client)
-            .validate_authentication_credentials(GitHubAuthenticationToken::new(
-                "token".to_string(),
-            ))
+            .validate(GitHubAuthenticationToken::new("token".to_string()))
             .await
             .unwrap();
 
@@ -121,9 +119,7 @@ mod tests {
         );
 
         let validity = under_test(mock_github_client)
-            .validate_authentication_credentials(GitHubAuthenticationToken::new(
-                "token".to_string(),
-            ))
+            .validate(GitHubAuthenticationToken::new("token".to_string()))
             .await
             .unwrap();
 
