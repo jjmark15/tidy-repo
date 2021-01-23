@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::domain::authentication::persistence::CredentialRepositoryError;
 pub use github_authentication_service::*;
 pub use github_token::*;
 pub use validator::*;
@@ -48,8 +49,8 @@ pub enum AuthenticationError {
     NoCredentialsFound,
     #[error("invalid credentials")]
     InvalidCredentials,
-    #[error("an error occurred during authentication persistence")]
-    Persistence,
+    #[error(transparent)]
+    Persistence(#[from] CredentialRepositoryError),
     #[error("Could not validate authentication")]
     Validation,
     #[cfg(test)]

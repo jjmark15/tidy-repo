@@ -53,7 +53,7 @@ where
                 .authentication_persistence
                 .store(credentials)
                 .await
-                .map_err(|_| AuthenticationError::Persistence),
+                .map_err(AuthenticationError::from),
             AuthenticationValidity::Invalid => Err(AuthenticationError::InvalidCredentials),
         }
     }
@@ -64,7 +64,7 @@ where
         self.authentication_persistence
             .get()
             .await
-            .map_err(|_| AuthenticationError::Persistence)
+            .map_err(AuthenticationError::from)
     }
 }
 
@@ -166,7 +166,7 @@ mod tests {
 
         assert_that(&matches!(
             result.err().unwrap(),
-            AuthenticationError::Persistence
+            AuthenticationError::Persistence(..)
         ))
         .is_true();
     }
@@ -205,7 +205,7 @@ mod tests {
 
         assert_that(&matches!(
             result.err().unwrap(),
-            AuthenticationError::Persistence
+            AuthenticationError::Persistence(..)
         ))
         .is_true();
     }

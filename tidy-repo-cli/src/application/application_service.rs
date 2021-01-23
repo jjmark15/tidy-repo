@@ -86,6 +86,7 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
+    use crate::domain::authentication::persistence::CredentialRepositoryError;
     use crate::domain::authentication::{AuthenticationError, MockAuthenticationService};
     use crate::domain::count_branches::BranchCounterServiceImpl;
     use crate::domain::repository::Branch;
@@ -113,6 +114,10 @@ mod tests {
             RepositoryUrl::new(n.to_string()),
             (0..n).map(|index| Branch::new(index.to_string())).collect(),
         )
+    }
+
+    fn repository_error() -> CredentialRepositoryError {
+        CredentialRepositoryError::FailedToGetCredential
     }
 
     fn prepare_mock_repository_provider(
@@ -207,7 +212,7 @@ mod tests {
             .with(eq(GitHubAuthenticationToken::new(
                 "credentials".to_string(),
             )))
-            .returning(|_| Err(AuthenticationError::Persistence));
+            .returning(|_| Err(AuthenticationError::Persistence(repository_error())));
 
         let result = under_test(
             branch_counter_service,
@@ -220,7 +225,7 @@ mod tests {
         assert_that(&matches!(
             result.err().unwrap(),
             ApplicationError::Domain(DomainError::Authentication(
-                AuthenticationError::Persistence
+                AuthenticationError::Persistence(..)
             ))
         ))
         .is_true();

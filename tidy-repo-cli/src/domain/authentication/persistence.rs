@@ -16,12 +16,12 @@ pub trait CredentialRepository {
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(test, derive(Copy, Clone))]
 pub enum CredentialRepositoryError {
-    #[error("Credential does not exist in repository")]
+    #[error("Credential does not exist in storage")]
     CredentialDoesNotExist,
-    #[error("Failed to get credential from repository")]
+    #[error("Failed to retrieve credential")]
     FailedToGetCredential,
-    #[error("Repository contains corrupted data")]
+    #[error("Storage contains corrupted data")]
     CorruptData,
-    #[error("Failed to store credential in repository")]
+    #[error("Failed to store credential")]
     FailedToStoreCredential,
 }

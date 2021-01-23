@@ -16,8 +16,8 @@ fn fails_to_authenticate_with_github_when_app_home_directory_does_not_exist() {
         .arg("OAUTH-TOKEN")
         .assert();
 
-    assert.failure().stderr(ends_with(
-        "an error occurred during authentication persistence\n",
-    ));
+    assert
+        .failure()
+        .stderr(ends_with("Failed to store credential\n"));
     temp_home_directory.close().unwrap();
 }
