@@ -4,10 +4,10 @@ use crate::domain::authentication::{
 };
 use crate::domain::count_branches::BranchCounterService;
 use crate::domain::repository::RepositoryProvider;
-use crate::ports::initiation::terminal_client::cli_results::CountBranchesResult;
-use crate::ports::initiation::terminal_client::commands::CliCommand;
-use crate::ports::initiation::terminal_client::github_token::GitHubAuthenticationToken;
-use crate::ports::initiation::terminal_client::ClientOptions;
+use crate::ports::cli::terminal_client::cli_results::CountBranchesResult;
+use crate::ports::cli::terminal_client::commands::CliCommand;
+use crate::ports::cli::terminal_client::github_token::GitHubAuthenticationToken;
+use crate::ports::cli::terminal_client::ClientOptions;
 use crate::TidyRepoApp;
 
 pub struct TerminalClientTidyRepoAppAdapter<CO, BranchCounter, GAS, GRP>

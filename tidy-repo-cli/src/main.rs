@@ -3,7 +3,7 @@ use structopt::StructOpt;
 use tidy_repo::application::ApplicationService;
 use tidy_repo::domain::authentication::GitHubAuthenticationService;
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
-use tidy_repo::ports::initiation::terminal_client::{
+use tidy_repo::ports::cli::terminal_client::{
     StructOptClientOptions, TerminalClientTidyRepoAppAdapter,
 };
 use tidy_repo::ports::persistence::filesystem::{

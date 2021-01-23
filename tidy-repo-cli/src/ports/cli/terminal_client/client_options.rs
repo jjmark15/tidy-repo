@@ -1,8 +1,8 @@
 use structopt::StructOpt;
 
 use crate::application::repository::RepositoryUrlDto;
-use crate::ports::initiation::terminal_client::commands::CliCommand;
-use crate::ports::initiation::terminal_client::github_token::GitHubAuthenticationToken;
+use crate::ports::cli::terminal_client::commands::CliCommand;
+use crate::ports::cli::terminal_client::github_token::GitHubAuthenticationToken;
 
 pub trait ClientOptions {
     fn command(&self) -> CliCommand;
