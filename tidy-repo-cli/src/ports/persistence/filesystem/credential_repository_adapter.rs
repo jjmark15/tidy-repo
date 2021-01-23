@@ -2,42 +2,46 @@ use futures::io::ErrorKind;
 
 use crate::domain::authentication::persistence::{CredentialRepository, CredentialRepositoryError};
 use crate::domain::authentication::GitHubAuthenticationToken;
-use crate::ports::persistence::filesystem::{
-    FileSystemCredentialsPersistence, FileSystemPersistenceError,
-};
+use crate::ports::persistence::filesystem::{ContentStore, FileSystemPersistenceError};
 use crate::ports::persistence::Credentials;
 
 #[derive(Default)]
-pub struct FilesystemCredentialRepositoryAdapter<P: FileSystemCredentialsPersistence> {
-    persistence_service: P,
+pub struct FilesystemCredentialRepositoryAdapter<S>
+where
+    S: ContentStore<Content = Credentials>,
+{
+    content_store: S,
 }
 
-impl<P: FileSystemCredentialsPersistence> FilesystemCredentialRepositoryAdapter<P> {
-    pub fn new(persistence_service: P) -> Self {
+impl<S> FilesystemCredentialRepositoryAdapter<S>
+where
+    S: ContentStore<Content = Credentials>,
+{
+    pub fn new(persistence_service: S) -> Self {
         FilesystemCredentialRepositoryAdapter {
-            persistence_service,
+            content_store: persistence_service,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<P> CredentialRepository for FilesystemCredentialRepositoryAdapter<P>
+impl<S> CredentialRepository for FilesystemCredentialRepositoryAdapter<S>
 where
-    P: FileSystemCredentialsPersistence + Sync + Send,
+    S: ContentStore<Content = Credentials> + Sync + Send,
 {
     async fn store(
         &self,
         credentials: GitHubAuthenticationToken,
     ) -> Result<(), CredentialRepositoryError> {
         let credentials_at_rest = Credentials::new(credentials.value());
-        self.persistence_service
+        self.content_store
             .store(credentials_at_rest)
             .await
             .map_err(map_filesystem_error_when_storing)
     }
 
     async fn get(&self) -> Result<GitHubAuthenticationToken, CredentialRepositoryError> {
-        self.persistence_service
+        self.content_store
             .get()
             .await
             .map_err(map_filesystem_error_when_getting)
@@ -82,14 +86,14 @@ mod tests {
     use spectral::prelude::*;
 
     use crate::domain::authentication::GitHubAuthenticationToken;
-    use crate::ports::persistence::filesystem::MockFileSystemCredentialsPersistence;
+    use crate::ports::persistence::filesystem::MockContentStore;
     use crate::ports::persistence::Credentials;
 
     use super::*;
 
     fn under_test(
-        persistence_service: MockFileSystemCredentialsPersistence,
-    ) -> FilesystemCredentialRepositoryAdapter<MockFileSystemCredentialsPersistence> {
+        persistence_service: MockContentStore,
+    ) -> FilesystemCredentialRepositoryAdapter<MockContentStore> {
         FilesystemCredentialRepositoryAdapter::new(persistence_service)
     }
 
@@ -100,15 +104,15 @@ mod tests {
 
     #[async_std::test]
     async fn persists_credentials() {
-        let mut mock_persistence_service = MockFileSystemCredentialsPersistence::default();
-        mock_persistence_service
+        let mut mock_content_store = MockContentStore::default();
+        mock_content_store
             .expect_store()
             .times(1)
             .with(eq(Credentials::new("credentials".parse().unwrap())))
             .returning(|_| Ok(()));
 
         assert_that(
-            &under_test(mock_persistence_service)
+            &under_test(mock_content_store)
                 .store(GitHubAuthenticationToken::new("credentials".to_string()))
                 .await,
         )
@@ -117,13 +121,13 @@ mod tests {
 
     #[async_std::test]
     async fn returns_persisted_credentials() {
-        let mut mock_persistence_service = MockFileSystemCredentialsPersistence::default();
-        mock_persistence_service
+        let mut mock_content_store = MockContentStore::default();
+        mock_content_store
             .expect_get()
             .times(1)
             .returning(|| Ok(Credentials::new("credentials".to_string())));
 
-        assert_that(&under_test(mock_persistence_service).get().await.unwrap())
+        assert_that(&under_test(mock_content_store).get().await.unwrap())
             .is_equal_to(&GitHubAuthenticationToken::new("credentials".to_string()));
     }
 }

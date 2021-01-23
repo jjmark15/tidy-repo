@@ -1,7 +1,7 @@
+pub use content_storage::*;
 pub use credential_repository_adapter::*;
-pub use credentials_persistence::*;
 pub use error::*;
 
+mod content_storage;
 mod credential_repository_adapter;
-mod credentials_persistence;
 mod error;

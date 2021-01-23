@@ -1,29 +1,45 @@
 use async_std::fs::File;
 use async_std::path::{Path, PathBuf};
+use serde::__private::PhantomData;
 
+#[cfg(test)]
+use crate::ports::persistence::credentials::Credentials;
 use crate::ports::persistence::filesystem::FileSystemPersistenceError;
-use crate::ports::persistence::Credentials;
 use crate::utils::environment::EnvironmentReader;
 
 const HOME_ENVIRONMENT_VARIABLE: &str = "TIDY_REPO_HOME";
 const CREDENTIALS_FILE_NAME: &str = "credentials.yml";
 
-#[cfg_attr(test, mockall::automock)]
+#[cfg_attr(test, mockall::automock(type Content = Credentials;))]
 #[async_trait::async_trait]
-pub trait FileSystemCredentialsPersistence {
-    async fn get(&self) -> Result<Credentials, FileSystemPersistenceError>;
+pub trait ContentStore {
+    type Content;
 
-    async fn store(&self, data: Credentials) -> Result<(), FileSystemPersistenceError>;
+    async fn get(&self) -> Result<Self::Content, FileSystemPersistenceError>;
+
+    async fn store(&self, content: Self::Content) -> Result<(), FileSystemPersistenceError>;
 }
 
 #[derive(Debug, Default)]
-pub struct FileSystemCredentialsPersistenceImpl<E: EnvironmentReader> {
+pub struct SerializableContentFilesystemStore<C, E>
+where
+    C: serde::Serialize + serde::de::DeserializeOwned,
+    E: EnvironmentReader,
+{
     environment_reader: E,
+    content_type_marker: PhantomData<C>,
 }
 
-impl<E: EnvironmentReader> FileSystemCredentialsPersistenceImpl<E> {
+impl<C, E> SerializableContentFilesystemStore<C, E>
+where
+    C: serde::Serialize + serde::de::DeserializeOwned,
+    E: EnvironmentReader,
+{
     pub fn new(environment_reader: E) -> Self {
-        FileSystemCredentialsPersistenceImpl { environment_reader }
+        SerializableContentFilesystemStore {
+            environment_reader,
+            content_type_marker: Default::default(),
+        }
     }
 
     async fn create_file_if_does_not_exist(
@@ -36,7 +52,7 @@ impl<E: EnvironmentReader> FileSystemCredentialsPersistenceImpl<E> {
         Ok(())
     }
 
-    fn credentials_file_path(&self) -> Result<PathBuf, FileSystemPersistenceError> {
+    fn file_path(&self) -> Result<PathBuf, FileSystemPersistenceError> {
         let app_home_directory =
             shellexpand::tilde(&self.environment_reader.read(HOME_ENVIRONMENT_VARIABLE)?)
                 .to_string();
@@ -45,25 +61,21 @@ impl<E: EnvironmentReader> FileSystemCredentialsPersistenceImpl<E> {
             .collect())
     }
 
-    fn serialize_data(&self, data: Credentials) -> Result<String, FileSystemPersistenceError> {
+    fn serialize_content(&self, data: C) -> Result<String, FileSystemPersistenceError> {
         serde_yaml::to_string(&data).map_err(FileSystemPersistenceError::from)
     }
 
-    fn deserialize_data(&self, s: String) -> Result<Credentials, FileSystemPersistenceError> {
+    fn deserialize_content(&self, s: String) -> Result<C, FileSystemPersistenceError> {
         serde_yaml::from_str(s.as_str()).map_err(FileSystemPersistenceError::from)
     }
 
-    async fn write_to_file(
-        &self,
-        p: &Path,
-        contents: String,
-    ) -> Result<(), FileSystemPersistenceError> {
+    async fn write(&self, p: &Path, contents: String) -> Result<(), FileSystemPersistenceError> {
         async_std::fs::write(p, contents)
             .await
             .map_err(FileSystemPersistenceError::from)
     }
 
-    async fn read_from_file(&self, p: &Path) -> Result<String, FileSystemPersistenceError> {
+    async fn read(&self, p: &Path) -> Result<String, FileSystemPersistenceError> {
         async_std::fs::read_to_string(p)
             .await
             .map_err(FileSystemPersistenceError::from)
@@ -71,21 +83,24 @@ impl<E: EnvironmentReader> FileSystemCredentialsPersistenceImpl<E> {
 }
 
 #[async_trait::async_trait]
-impl<E> FileSystemCredentialsPersistence for FileSystemCredentialsPersistenceImpl<E>
+impl<C, E> ContentStore for SerializableContentFilesystemStore<C, E>
 where
+    C: serde::Serialize + serde::de::DeserializeOwned + Send + Sync,
     E: EnvironmentReader + Send + Sync,
 {
-    async fn get(&self) -> Result<Credentials, FileSystemPersistenceError> {
-        let path: PathBuf = self.credentials_file_path()?;
-        let file_contents = self.read_from_file(path.as_path()).await?;
-        self.deserialize_data(file_contents)
+    type Content = C;
+
+    async fn get(&self) -> Result<Self::Content, FileSystemPersistenceError> {
+        let path: PathBuf = self.file_path()?;
+        let file_contents = self.read(path.as_path()).await?;
+        self.deserialize_content(file_contents)
     }
 
-    async fn store(&self, data: Credentials) -> Result<(), FileSystemPersistenceError> {
-        let path: PathBuf = self.credentials_file_path()?;
+    async fn store(&self, data: Self::Content) -> Result<(), FileSystemPersistenceError> {
+        let path: PathBuf = self.file_path()?;
         self.create_file_if_does_not_exist(path.as_path()).await?;
-        let contents = self.serialize_data(data)?;
-        self.write_to_file(path.as_path(), contents).await?;
+        let contents = self.serialize_content(data)?;
+        self.write(path.as_path(), contents).await?;
         Ok(())
     }
 }
@@ -98,14 +113,15 @@ mod tests {
     use predicates::ord::eq;
     use spectral::prelude::*;
 
+    use crate::ports::persistence::credentials::Credentials;
     use crate::utils::environment::MockEnvironmentReader;
 
     use super::*;
 
     fn under_test(
         environment_reader: MockEnvironmentReader,
-    ) -> FileSystemCredentialsPersistenceImpl<MockEnvironmentReader> {
-        FileSystemCredentialsPersistenceImpl::new(environment_reader)
+    ) -> SerializableContentFilesystemStore<Credentials, MockEnvironmentReader> {
+        SerializableContentFilesystemStore::new(environment_reader)
     }
 
     async fn read_credentials_file_contents(p: &Path) -> Result<Credentials, std::io::Error> {

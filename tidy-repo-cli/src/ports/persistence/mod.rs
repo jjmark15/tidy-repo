@@ -1,4 +1,4 @@
-use crate::ports::persistence::credentials::Credentials;
+pub use credentials::Credentials;
 
 mod credentials;
 pub mod filesystem;
