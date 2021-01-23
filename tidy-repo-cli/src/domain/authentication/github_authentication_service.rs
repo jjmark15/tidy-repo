@@ -76,17 +76,17 @@ mod tests {
     use crate::domain::authentication::persistence::MockCredentialRepository;
     use crate::domain::authentication::AuthenticationValidity;
     use crate::domain::authentication::MockRepositoryCredentialsValidator;
+    use crate::utils::test_helpers::async_this;
 
     use super::*;
 
-    type MockRepositoryCredentialsValidatorAlias = MockRepositoryCredentialsValidator<()>;
     type MockCredentialRepositoryAlias = MockCredentialRepository<()>;
 
     fn under_test(
-        authentication_validator: MockRepositoryCredentialsValidatorAlias,
+        authentication_validator: MockRepositoryCredentialsValidator,
         authentication_persistence: MockCredentialRepositoryAlias,
     ) -> GitHubAuthenticationService<
-        MockRepositoryCredentialsValidatorAlias,
+        MockRepositoryCredentialsValidator,
         MockCredentialRepositoryAlias,
     > {
         GitHubAuthenticationService::new(authentication_validator, authentication_persistence)
@@ -96,8 +96,8 @@ mod tests {
         MockCredentialRepositoryAlias::default()
     }
 
-    fn mock_credentials_validator() -> MockRepositoryCredentialsValidatorAlias {
-        MockRepositoryCredentialsValidatorAlias::default()
+    fn mock_credentials_validator() -> MockRepositoryCredentialsValidator {
+        MockRepositoryCredentialsValidator::default()
     }
 
     #[async_std::test]
@@ -112,7 +112,7 @@ mod tests {
         mock_credentials_validator
             .expect_validate()
             .with(eq(token.clone()))
-            .returning(|_| Ok(AuthenticationValidity::Valid));
+            .returning(|_| Box::pin(async_this(Ok(AuthenticationValidity::Valid))));
 
         assert_that(
             &under_test(mock_credentials_validator, mock_credential_repository)
@@ -134,7 +134,7 @@ mod tests {
         mock_credentials_validator
             .expect_validate()
             .with(eq(token.clone()))
-            .returning(|_| Ok(AuthenticationValidity::Invalid));
+            .returning(|_| Box::pin(async_this(Ok(AuthenticationValidity::Invalid))));
 
         let result = under_test(mock_credentials_validator, mock_credential_repository)
             .authenticate(token)
@@ -156,7 +156,7 @@ mod tests {
         mock_credentials_validator
             .expect_validate()
             .with(eq(token.clone()))
-            .returning(|_| Ok(AuthenticationValidity::Valid));
+            .returning(|_| Box::pin(async_this(Ok(AuthenticationValidity::Valid))));
 
         let result = under_test(mock_credentials_validator, mock_credential_repository)
             .authenticate(token)

@@ -1,28 +1,18 @@
 use crate::domain::authentication::GitHubAuthenticationToken;
 
 #[async_trait::async_trait]
+#[cfg_attr(test, mockall::automock)]
 pub trait RepositoryCredentialsValidator {
-    type Err;
-
     async fn validate(
         &self,
         credentials: GitHubAuthenticationToken,
-    ) -> Result<AuthenticationValidity, Self::Err>;
+    ) -> Result<AuthenticationValidity, RepositoryCredentialsValidationError>;
 }
 
-#[cfg(test)]
-mockall::mock! {
-    pub RepositoryCredentialsValidator<Err: 'static + Send + Sync> {}
-
-    #[async_trait::async_trait]
-    impl<Err: 'static + Send + Sync> RepositoryCredentialsValidator for RepositoryCredentialsValidator<Err> {
-        type Err = Err;
-
-        async fn validate(
-            &self,
-            credentials: GitHubAuthenticationToken,
-        ) -> Result<AuthenticationValidity, Err>;
-    }
+#[derive(Debug, thiserror::Error)]
+pub enum RepositoryCredentialsValidationError {
+    #[error("Failed to validate credentials")]
+    FailedToValidate,
 }
 
 #[derive(Debug, Eq, PartialEq)]

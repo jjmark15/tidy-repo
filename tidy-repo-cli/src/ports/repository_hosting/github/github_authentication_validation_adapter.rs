@@ -1,5 +1,6 @@
 use crate::domain::authentication::{
-    AuthenticationValidity, GitHubAuthenticationToken, RepositoryCredentialsValidator,
+    AuthenticationValidity, GitHubAuthenticationToken, RepositoryCredentialsValidationError,
+    RepositoryCredentialsValidator,
 };
 use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
 use crate::ports::repository_hosting::github::error::GitHubClientError;
@@ -36,18 +37,17 @@ where
         > + Send
         + Sync,
 {
-    type Err = GitHubClientError;
-
     async fn validate(
         &self,
         credentials: GitHubAuthenticationToken,
-    ) -> Result<AuthenticationValidity, Self::Err> {
+    ) -> Result<AuthenticationValidity, RepositoryCredentialsValidationError> {
         let validity = match self
             .github_client
             .validate_authentication_credentials(RepositoryClientGitHubAuthenticationToken::new(
                 credentials.value(),
             ))
-            .await?
+            .await
+            .map_err(|_| RepositoryCredentialsValidationError::FailedToValidate)?
         {
             AuthenticationCredentialValidity::Valid => AuthenticationValidity::Valid,
             AuthenticationCredentialValidity::Invalid => AuthenticationValidity::Invalid,
