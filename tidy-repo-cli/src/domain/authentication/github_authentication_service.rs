@@ -73,27 +73,25 @@ mod tests {
     use predicates::ord::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::MockCredentialRepository;
+    use crate::domain::authentication::persistence::{
+        CredentialRepositoryError, MockCredentialRepository,
+    };
     use crate::domain::authentication::AuthenticationValidity;
     use crate::domain::authentication::MockRepositoryCredentialsValidator;
     use crate::utils::test_helpers::async_this;
 
     use super::*;
 
-    type MockCredentialRepositoryAlias = MockCredentialRepository<()>;
-
     fn under_test(
         authentication_validator: MockRepositoryCredentialsValidator,
-        authentication_persistence: MockCredentialRepositoryAlias,
-    ) -> GitHubAuthenticationService<
-        MockRepositoryCredentialsValidator,
-        MockCredentialRepositoryAlias,
-    > {
+        authentication_persistence: MockCredentialRepository,
+    ) -> GitHubAuthenticationService<MockRepositoryCredentialsValidator, MockCredentialRepository>
+    {
         GitHubAuthenticationService::new(authentication_validator, authentication_persistence)
     }
 
-    fn mock_credential_repository() -> MockCredentialRepositoryAlias {
-        MockCredentialRepositoryAlias::default()
+    fn mock_credential_repository() -> MockCredentialRepository {
+        MockCredentialRepository::default()
     }
 
     fn mock_credentials_validator() -> MockRepositoryCredentialsValidator {
@@ -107,7 +105,7 @@ mod tests {
         mock_credential_repository
             .expect_store()
             .with(eq(token.clone()))
-            .returning(|_| Ok(()));
+            .returning(|_| Box::pin(async_this(Ok(()))));
         let mut mock_credentials_validator = mock_credentials_validator();
         mock_credentials_validator
             .expect_validate()
@@ -129,7 +127,7 @@ mod tests {
         mock_credential_repository
             .expect_store()
             .with(eq(token.clone()))
-            .returning(|_| Ok(()));
+            .returning(|_| Box::pin(async_this(Ok(()))));
         let mut mock_credentials_validator = mock_credentials_validator();
         mock_credentials_validator
             .expect_validate()
@@ -151,7 +149,11 @@ mod tests {
         mock_credential_repository
             .expect_store()
             .with(eq(token.clone()))
-            .returning(|_| Err(()));
+            .returning(|_| {
+                Box::pin(async_this(Err(
+                    CredentialRepositoryError::FailedToStoreCredential,
+                )))
+            });
         let mut mock_credentials_validator = mock_credentials_validator();
         mock_credentials_validator
             .expect_validate()
@@ -172,9 +174,11 @@ mod tests {
     #[async_std::test]
     async fn returns_persisted_authentication_credentials() {
         let mut mock_credential_repository = mock_credential_repository();
-        mock_credential_repository
-            .expect_get()
-            .returning(|| Ok(GitHubAuthenticationToken::new("credentials".into())));
+        mock_credential_repository.expect_get().returning(|| {
+            Box::pin(async_this(Ok(GitHubAuthenticationToken::new(
+                "credentials".into(),
+            ))))
+        });
         let mock_credentials_validator = mock_credentials_validator();
 
         assert_that(
@@ -188,9 +192,11 @@ mod tests {
     #[async_std::test]
     async fn fails_to_return_persisted_authentication_credentials_when_persistence_service_fails() {
         let mut mock_credential_repository = mock_credential_repository();
-        mock_credential_repository
-            .expect_get()
-            .returning(|| Err(()));
+        mock_credential_repository.expect_get().returning(|| {
+            Box::pin(async_this(Err(
+                CredentialRepositoryError::FailedToGetCredential,
+            )))
+        });
         let mock_credentials_validator = mock_credentials_validator();
 
         let result = under_test(mock_credentials_validator, mock_credential_repository)

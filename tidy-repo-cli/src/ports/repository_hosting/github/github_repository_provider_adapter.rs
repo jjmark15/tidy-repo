@@ -122,22 +122,24 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::MockCredentialRepository;
+    use crate::domain::authentication::persistence::{
+        CredentialRepositoryError, MockCredentialRepository,
+    };
     use crate::domain::authentication::GitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::repository::BranchName;
     use crate::ports::repository_hosting::github::MockRepositoryHostClient;
 
     use super::*;
+    use crate::utils::test_helpers::async_this;
 
     type MockRepositoryHostClientAlias =
         MockRepositoryHostClient<GitHubClientError, RepositoryClientGitHubAuthenticationToken>;
-    type MockCredentialRepositoryAlias = MockCredentialRepository<()>;
 
     fn under_test(
         repository_host_client: MockRepositoryHostClientAlias,
-        authentication_persistence_service: MockCredentialRepositoryAlias,
-    ) -> GitHubRepositoryProviderAdapter<MockRepositoryHostClientAlias, MockCredentialRepositoryAlias>
+        authentication_persistence_service: MockCredentialRepository,
+    ) -> GitHubRepositoryProviderAdapter<MockRepositoryHostClientAlias, MockCredentialRepository>
     {
         GitHubRepositoryProviderAdapter::new(
             repository_host_client,
@@ -168,27 +170,31 @@ mod tests {
     }
 
     fn prepare_mock_credential_repository_to_fail(
-        mock_authentication_persistence_service: &mut MockCredentialRepositoryAlias,
+        mock_authentication_persistence_service: &mut MockCredentialRepository,
+        error: CredentialRepositoryError,
     ) {
         mock_authentication_persistence_service
             .expect_get()
-            .returning(|| Err(()));
+            .returning(move || Box::pin(async_this(Err(error))));
     }
 
     fn prepare_mock_credential_repository_to_succeed(
-        mock_credential_repository: &mut MockCredentialRepositoryAlias,
+        mock_credential_repository: &mut MockCredentialRepository,
         credentials: GitHubAuthenticationToken,
     ) {
         mock_credential_repository
             .expect_get()
-            .returning(move || Ok(credentials.clone()));
+            .returning(move || Box::pin(async_this(Ok(credentials.clone()))));
     }
 
     #[async_std::test]
     async fn gets_repository_given_valid_url_and_no_credentials_available() {
         let mut mock_repository_host_client = MockRepositoryHostClient::default();
-        let mut mock_credential_repository = MockCredentialRepositoryAlias::default();
-        prepare_mock_credential_repository_to_fail(&mut mock_credential_repository);
+        let mut mock_credential_repository = MockCredentialRepository::default();
+        prepare_mock_credential_repository_to_fail(
+            &mut mock_credential_repository,
+            CredentialRepositoryError::CredentialDoesNotExist,
+        );
         prepare_mock_client_list_branches(
             &mut mock_repository_host_client,
             RepositoryClientRepositoryUrl::new("url".to_string()),
@@ -210,7 +216,7 @@ mod tests {
     #[async_std::test]
     async fn authenticates_client_when_credentials_are_available() {
         let mut mock_repository_host_client = MockRepositoryHostClient::default();
-        let mut mock_credential_repository = MockCredentialRepositoryAlias::default();
+        let mut mock_credential_repository = MockCredentialRepository::default();
         prepare_mock_client_set_authentication(
             &mut mock_repository_host_client,
             RepositoryClientGitHubAuthenticationToken::new("token".to_string()),

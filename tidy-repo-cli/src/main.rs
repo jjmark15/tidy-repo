@@ -7,7 +7,7 @@ use tidy_repo::ports::initiation::terminal_client::{
     StructOptClientOptions, TerminalClientTidyRepoAppAdapter,
 };
 use tidy_repo::ports::persistence::filesystem::{
-    FileSystemCredentialsPersistence, FilesystemCredentialRepositoryAdapter,
+    FileSystemCredentialsPersistenceImpl, FilesystemCredentialRepositoryAdapter,
 };
 use tidy_repo::ports::repository_hosting::github::{
     GitHubClient, GitHubCredentialsValidatorAdapter, GitHubRepositoryProviderAdapter,
@@ -23,8 +23,9 @@ type GitHubAuthenticationServiceAlias = GitHubAuthenticationService<
     GitHubCredentialsValidatorAdapter<GitHubClientAlias>,
     FilesystemAuthenticationPersistenceServiceAlias,
 >;
-type FilesystemAuthenticationPersistenceServiceAlias =
-    FilesystemCredentialRepositoryAdapter<FileSystemCredentialsPersistence<EnvironmentReaderStd>>;
+type FilesystemAuthenticationPersistenceServiceAlias = FilesystemCredentialRepositoryAdapter<
+    FileSystemCredentialsPersistenceImpl<EnvironmentReaderStd>,
+>;
 
 #[async_std::main]
 async fn main() {
@@ -43,7 +44,7 @@ fn github_client() -> GitHubClientAlias {
 }
 
 fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceServiceAlias {
-    FilesystemCredentialRepositoryAdapter::new(FileSystemCredentialsPersistence::new(
+    FilesystemCredentialRepositoryAdapter::new(FileSystemCredentialsPersistenceImpl::new(
         EnvironmentReaderStd::new(),
     ))
 }
