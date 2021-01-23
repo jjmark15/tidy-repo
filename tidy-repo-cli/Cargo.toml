@@ -1,6 +1,6 @@
 [package]
 name = "tidy-repo"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Josh Jones <ohblonddev@gmail.com>"]
 edition = "2018"
 
