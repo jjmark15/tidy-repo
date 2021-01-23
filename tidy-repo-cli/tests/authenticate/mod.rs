@@ -9,6 +9,7 @@ mod authenticates_with_github;
 mod authentication_with_github_overwrites_previous_github_authentication;
 mod fails_to_authenticate_with_github_when_app_home_directory_does_not_exist;
 mod fails_to_authenticate_with_github_when_passed_invalid_token;
+mod fails_when_app_home_environment_variable_is_not_set;
 
 pub(crate) fn authenticate_command(temp_home_directory: &Path) -> Command {
     let mut cmd = test_command(temp_home_directory);

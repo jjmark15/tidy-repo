@@ -1,5 +1,8 @@
+use std::path::PathBuf;
+
 use structopt::StructOpt;
 
+use std::process::exit;
 use tidy_repo::application::ApplicationService;
 use tidy_repo::domain::authentication::GitHubAuthenticationService;
 use tidy_repo::domain::count_branches::BranchCounterServiceImpl;
@@ -14,7 +17,7 @@ use tidy_repo::ports::repository_hosting::github::{
     GitHubClient, GitHubCredentialsValidatorAdapter, GitHubRepositoryProviderAdapter,
     GitHubRepositoryUrlParserImpl,
 };
-use tidy_repo::utils::environment::EnvironmentReaderStd;
+use tidy_repo::utils::environment::{EnvironmentReader, EnvironmentReaderStd};
 use tidy_repo::utils::http::HttpClientFacadeImpl;
 use tidy_repo::TidyRepoApp;
 
@@ -24,9 +27,8 @@ type GitHubAuthenticationServiceAlias = GitHubAuthenticationService<
     GitHubCredentialsValidatorAdapter<GitHubClientAlias>,
     FilesystemAuthenticationPersistenceServiceAlias,
 >;
-type FilesystemAuthenticationPersistenceServiceAlias = FilesystemCredentialRepositoryAdapter<
-    SerializableContentFilesystemStore<Credentials, EnvironmentReaderStd>,
->;
+type FilesystemAuthenticationPersistenceServiceAlias =
+    FilesystemCredentialRepositoryAdapter<SerializableContentFilesystemStore<Credentials>>;
 
 #[async_std::main]
 async fn main() {
@@ -38,6 +40,19 @@ fn tidy_repo_app() -> impl TidyRepoApp {
     TerminalClientTidyRepoAppAdapter::new(client_options, application_service())
 }
 
+fn app_credentials_filepath() -> PathBuf {
+    let env_reader = EnvironmentReaderStd::new();
+
+    match &env_reader.read("TIDY_REPO_HOME") {
+        Ok(path_string) => PathBuf::from(shellexpand::tilde(path_string).to_string()),
+        Err(_e) => {
+            eprintln!("Error: TIDY_REPO_HOME environment variable is not set");
+            exit(1);
+        }
+    }
+    .join("credentials.yml")
+}
+
 fn github_client() -> GitHubClientAlias {
     let http_client = HttpClientFacadeImpl::new(surf::client());
     let url_parser = GitHubRepositoryUrlParserImpl::new();
@@ -46,8 +61,7 @@ fn github_client() -> GitHubClientAlias {
 
 fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceServiceAlias {
     FilesystemCredentialRepositoryAdapter::new(SerializableContentFilesystemStore::new(
-        "credentials.yml",
-        EnvironmentReaderStd::new(),
+        app_credentials_filepath(),
     ))
 }
 
