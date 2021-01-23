@@ -46,6 +46,7 @@ fn github_client() -> GitHubClientAlias {
 
 fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceServiceAlias {
     FilesystemCredentialRepositoryAdapter::new(SerializableContentFilesystemStore::new(
+        "credentials.yml",
         EnvironmentReaderStd::new(),
     ))
 }

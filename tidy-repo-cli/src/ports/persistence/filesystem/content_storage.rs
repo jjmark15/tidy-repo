@@ -8,7 +8,6 @@ use crate::ports::persistence::filesystem::FileSystemPersistenceError;
 use crate::utils::environment::EnvironmentReader;
 
 const HOME_ENVIRONMENT_VARIABLE: &str = "TIDY_REPO_HOME";
-const CREDENTIALS_FILE_NAME: &str = "credentials.yml";
 
 #[cfg_attr(test, mockall::automock(type Content = Credentials;))]
 #[async_trait::async_trait]
@@ -28,6 +27,7 @@ where
 {
     environment_reader: E,
     content_type_marker: PhantomData<C>,
+    filename: String,
 }
 
 impl<C, E> SerializableContentFilesystemStore<C, E>
@@ -35,8 +35,9 @@ where
     C: serde::Serialize + serde::de::DeserializeOwned,
     E: EnvironmentReader,
 {
-    pub fn new(environment_reader: E) -> Self {
+    pub fn new<S: AsRef<str>>(filename: S, environment_reader: E) -> Self {
         SerializableContentFilesystemStore {
+            filename: filename.as_ref().to_string(),
             environment_reader,
             content_type_marker: Default::default(),
         }
@@ -56,7 +57,7 @@ where
         let app_home_directory =
             shellexpand::tilde(&self.environment_reader.read(HOME_ENVIRONMENT_VARIABLE)?)
                 .to_string();
-        Ok([app_home_directory, CREDENTIALS_FILE_NAME.to_string()]
+        Ok([app_home_directory, self.filename.as_str().to_string()]
             .iter()
             .collect())
     }
@@ -118,10 +119,12 @@ mod tests {
 
     use super::*;
 
+    const TEST_STORE_FILE_NAME: &str = "filename.yml";
+
     fn under_test(
         environment_reader: MockEnvironmentReader,
     ) -> SerializableContentFilesystemStore<Credentials, MockEnvironmentReader> {
-        SerializableContentFilesystemStore::new(environment_reader)
+        SerializableContentFilesystemStore::new(TEST_STORE_FILE_NAME, environment_reader)
     }
 
     async fn read_credentials_file_contents(p: &Path) -> Result<Credentials, std::io::Error> {
@@ -147,7 +150,7 @@ mod tests {
     async fn storing_credentials_creates_file_when_not_present() {
         let temp_directory = assert_fs::TempDir::new().unwrap();
         let temp_directory_path = temp_directory.path().to_path_buf();
-        let credentials_file_path = temp_directory.child(CREDENTIALS_FILE_NAME);
+        let credentials_file_path = temp_directory.child(TEST_STORE_FILE_NAME);
         let credentials = Credentials::new("token".parse().unwrap());
         let mock_environment_reader =
             mock_environment_reader(temp_directory_path.to_str().unwrap().to_string());
@@ -165,7 +168,7 @@ mod tests {
     async fn stores_credentials_as_yaml() {
         let temp_directory = assert_fs::TempDir::new().unwrap();
         let temp_directory_path = temp_directory.path().to_path_buf();
-        let credentials_file_path = temp_directory.child(CREDENTIALS_FILE_NAME);
+        let credentials_file_path = temp_directory.child(TEST_STORE_FILE_NAME);
         let credentials = Credentials::new("token".parse().unwrap());
         let mock_environment_reader =
             mock_environment_reader(temp_directory_path.to_str().unwrap().to_string());
@@ -188,7 +191,7 @@ mod tests {
     async fn loads_credentials_from_file() {
         let temp_directory = assert_fs::TempDir::new().unwrap();
         let temp_directory_path = temp_directory.path().to_path_buf();
-        let credentials_file_path = temp_directory.child(CREDENTIALS_FILE_NAME);
+        let credentials_file_path = temp_directory.child(TEST_STORE_FILE_NAME);
         let credentials = Credentials::new("token".parse().unwrap());
         let mock_environment_reader =
             mock_environment_reader(temp_directory_path.to_str().unwrap().to_string());
