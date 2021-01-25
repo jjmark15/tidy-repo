@@ -1,13 +1,14 @@
 use async_trait::async_trait;
 
-use crate::domain::authentication::persistence::CredentialRepositoryError;
 pub use github_authentication_service::*;
 pub use github_token::*;
 pub use validator::*;
 
+use crate::domain::authentication::credential_repository::CredentialRepositoryError;
+
+pub mod credential_repository;
 mod github_authentication_service;
 mod github_token;
-pub mod persistence;
 mod validator;
 
 #[async_trait]

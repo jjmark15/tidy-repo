@@ -25,9 +25,9 @@ type GitHubClientAlias =
     GitHubClient<HttpClientFacadeImpl, GitHubRepositoryUrlParserImpl, EnvironmentReaderStd>;
 type GitHubAuthenticationServiceAlias = GitHubAuthenticationService<
     GitHubCredentialsValidatorAdapter<GitHubClientAlias>,
-    FilesystemAuthenticationPersistenceServiceAlias,
+    FilesystemCredentialRepositoryAdapterAlias,
 >;
-type FilesystemAuthenticationPersistenceServiceAlias =
+type FilesystemCredentialRepositoryAdapterAlias =
     FilesystemCredentialRepositoryAdapter<SerializableContentFilesystemStore<Credentials>>;
 
 #[async_std::main]
@@ -59,7 +59,7 @@ fn github_client() -> GitHubClientAlias {
     GitHubClient::new(http_client, url_parser, EnvironmentReaderStd::new())
 }
 
-fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceServiceAlias {
+fn credential_repository() -> FilesystemCredentialRepositoryAdapterAlias {
     FilesystemCredentialRepositoryAdapter::new(SerializableContentFilesystemStore::new(
         app_credentials_filepath(),
     ))
@@ -68,20 +68,17 @@ fn authentication_persistence_service() -> FilesystemAuthenticationPersistenceSe
 fn github_authentication_service() -> GitHubAuthenticationServiceAlias {
     GitHubAuthenticationService::new(
         GitHubCredentialsValidatorAdapter::new(github_client()),
-        authentication_persistence_service(),
+        credential_repository(),
     )
 }
 
 fn application_service() -> ApplicationService<
     BranchCounterServiceImpl,
     GitHubAuthenticationServiceAlias,
-    GitHubRepositoryProviderAdapter<
-        GitHubClientAlias,
-        FilesystemAuthenticationPersistenceServiceAlias,
-    >,
+    GitHubRepositoryProviderAdapter<GitHubClientAlias, FilesystemCredentialRepositoryAdapterAlias>,
 > {
     let github_repository_provider =
-        GitHubRepositoryProviderAdapter::new(github_client(), authentication_persistence_service());
+        GitHubRepositoryProviderAdapter::new(github_client(), credential_repository());
     let branch_counter_service = BranchCounterServiceImpl::new();
     ApplicationService::new(
         branch_counter_service,

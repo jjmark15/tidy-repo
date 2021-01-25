@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::domain::authentication::persistence::CredentialRepository;
+use crate::domain::authentication::credential_repository::CredentialRepository;
 use crate::domain::repository::{Branch, RepositoryProviderError};
 use crate::domain::repository::{Repository, RepositoryProvider, RepositoryUrl};
 use crate::domain::value_object::ValueObject;
@@ -12,41 +12,37 @@ use crate::ports::repository_hosting::github::{
 };
 
 #[derive(Default)]
-pub struct GitHubRepositoryProviderAdapter<GC, AuthPersistence>
+pub struct GitHubRepositoryProviderAdapter<GC, CR>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
         AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
     >,
-    AuthPersistence: CredentialRepository,
+    CR: CredentialRepository,
 {
     github_client: GC,
-    authentication_persistence_type_marker: PhantomData<AuthPersistence>,
+    credential_repository_type_marker: PhantomData<CR>,
 }
 
-impl<GC, AuthPersistence> GitHubRepositoryProviderAdapter<GC, AuthPersistence>
+impl<GC, CR> GitHubRepositoryProviderAdapter<GC, CR>
 where
     GC: RepositoryHostClient<
         Err = GitHubClientError,
         AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
     >,
-    AuthPersistence: CredentialRepository,
+    CR: CredentialRepository,
 {
-    pub fn new(mut github_client: GC, authentication_persistence_service: AuthPersistence) -> Self {
-        Self::authenticate_github_client(&mut github_client, &authentication_persistence_service);
+    pub fn new(mut github_client: GC, credential_repository: CR) -> Self {
+        Self::authenticate_github_client(&mut github_client, &credential_repository);
 
         GitHubRepositoryProviderAdapter {
             github_client,
-            authentication_persistence_type_marker: PhantomData::default(),
+            credential_repository_type_marker: PhantomData::default(),
         }
     }
 
-    fn authenticate_github_client(
-        github_client: &mut GC,
-        authentication_persistence_service: &AuthPersistence,
-    ) {
-        if let Ok(credentials) = async_std::task::block_on(authentication_persistence_service.get())
-        {
+    fn authenticate_github_client(github_client: &mut GC, credential_repository: &CR) {
+        if let Ok(credentials) = async_std::task::block_on(credential_repository.get()) {
             github_client.set_authentication_credentials(
                 RepositoryClientGitHubAuthenticationToken::new(credentials.value()),
             );
@@ -55,15 +51,14 @@ where
 }
 
 #[async_trait::async_trait]
-impl<GC, AuthPersistence> RepositoryProvider
-    for GitHubRepositoryProviderAdapter<GC, AuthPersistence>
+impl<GC, CR> RepositoryProvider for GitHubRepositoryProviderAdapter<GC, CR>
 where
     GC: RepositoryHostClient<
             Err = GitHubClientError,
             AuthenticationCredentials = RepositoryClientGitHubAuthenticationToken,
         > + Sync
         + Send,
-    AuthPersistence: CredentialRepository + Sync + Send,
+    CR: CredentialRepository + Sync + Send,
 {
     async fn get_repository(
         &self,
@@ -122,29 +117,26 @@ mod tests {
     use mockall::predicate::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::{
+    use crate::domain::authentication::credential_repository::{
         CredentialRepositoryError, MockCredentialRepository,
     };
     use crate::domain::authentication::GitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::authentication_token::GitHubAuthenticationToken as RepositoryClientGitHubAuthenticationToken;
     use crate::ports::repository_hosting::github::repository::BranchName;
     use crate::ports::repository_hosting::github::MockRepositoryHostClient;
+    use crate::utils::test_helpers::async_this;
 
     use super::*;
-    use crate::utils::test_helpers::async_this;
 
     type MockRepositoryHostClientAlias =
         MockRepositoryHostClient<GitHubClientError, RepositoryClientGitHubAuthenticationToken>;
 
     fn under_test(
         repository_host_client: MockRepositoryHostClientAlias,
-        authentication_persistence_service: MockCredentialRepository,
+        credential_repository: MockCredentialRepository,
     ) -> GitHubRepositoryProviderAdapter<MockRepositoryHostClientAlias, MockCredentialRepository>
     {
-        GitHubRepositoryProviderAdapter::new(
-            repository_host_client,
-            authentication_persistence_service,
-        )
+        GitHubRepositoryProviderAdapter::new(repository_host_client, credential_repository)
     }
 
     fn prepare_mock_client_list_branches(
@@ -170,10 +162,10 @@ mod tests {
     }
 
     fn prepare_mock_credential_repository_to_fail(
-        mock_authentication_persistence_service: &mut MockCredentialRepository,
+        mock_credential_repository: &mut MockCredentialRepository,
         error: CredentialRepositoryError,
     ) {
-        mock_authentication_persistence_service
+        mock_credential_repository
             .expect_get()
             .returning(move || Box::pin(async_this(Err(error))));
     }

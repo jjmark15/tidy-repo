@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::domain::authentication::persistence::CredentialRepository;
+use crate::domain::authentication::credential_repository::CredentialRepository;
 use crate::domain::authentication::AuthenticationValidity;
 use crate::domain::authentication::{
     AuthenticationError, AuthenticationService, GitHubAuthenticationToken,
@@ -8,33 +8,33 @@ use crate::domain::authentication::{
 };
 
 #[derive(Debug, Default)]
-pub struct GitHubAuthenticationService<AV, PA>
+pub struct GitHubAuthenticationService<AV, CR>
 where
     AV: RepositoryCredentialsValidator,
-    PA: CredentialRepository,
+    CR: CredentialRepository,
 {
     authentication_validator: AV,
-    authentication_persistence: PA,
+    credential_repository: CR,
 }
 
-impl<AV, PA> GitHubAuthenticationService<AV, PA>
+impl<AV, CR> GitHubAuthenticationService<AV, CR>
 where
     AV: RepositoryCredentialsValidator,
-    PA: CredentialRepository,
+    CR: CredentialRepository,
 {
-    pub fn new(authentication_validator: AV, authentication_persistence: PA) -> Self {
+    pub fn new(authentication_validator: AV, credential_repository: CR) -> Self {
         GitHubAuthenticationService {
             authentication_validator,
-            authentication_persistence,
+            credential_repository,
         }
     }
 }
 
 #[async_trait]
-impl<AV, PA> AuthenticationService for GitHubAuthenticationService<AV, PA>
+impl<AV, CR> AuthenticationService for GitHubAuthenticationService<AV, CR>
 where
     AV: RepositoryCredentialsValidator + Send + Sync,
-    PA: CredentialRepository + Send + Sync,
+    CR: CredentialRepository + Send + Sync,
 {
     type AuthenticationCredentials = GitHubAuthenticationToken;
 
@@ -50,7 +50,7 @@ where
 
         match validity {
             AuthenticationValidity::Valid => self
-                .authentication_persistence
+                .credential_repository
                 .store(credentials)
                 .await
                 .map_err(AuthenticationError::from),
@@ -61,7 +61,7 @@ where
     async fn authentication_credentials(
         &self,
     ) -> Result<Self::AuthenticationCredentials, AuthenticationError> {
-        self.authentication_persistence
+        self.credential_repository
             .get()
             .await
             .map_err(AuthenticationError::from)
@@ -73,7 +73,7 @@ mod tests {
     use predicates::ord::eq;
     use spectral::prelude::*;
 
-    use crate::domain::authentication::persistence::{
+    use crate::domain::authentication::credential_repository::{
         CredentialRepositoryError, MockCredentialRepository,
     };
     use crate::domain::authentication::AuthenticationValidity;
@@ -84,10 +84,10 @@ mod tests {
 
     fn under_test(
         authentication_validator: MockRepositoryCredentialsValidator,
-        authentication_persistence: MockCredentialRepository,
+        credential_repository: MockCredentialRepository,
     ) -> GitHubAuthenticationService<MockRepositoryCredentialsValidator, MockCredentialRepository>
     {
-        GitHubAuthenticationService::new(authentication_validator, authentication_persistence)
+        GitHubAuthenticationService::new(authentication_validator, credential_repository)
     }
 
     fn mock_credential_repository() -> MockCredentialRepository {

@@ -1,6 +1,8 @@
 use futures::io::ErrorKind;
 
-use crate::domain::authentication::persistence::{CredentialRepository, CredentialRepositoryError};
+use crate::domain::authentication::credential_repository::{
+    CredentialRepository, CredentialRepositoryError,
+};
 use crate::domain::authentication::GitHubAuthenticationToken;
 use crate::ports::persistence::filesystem::{ContentStore, FileSystemPersistenceError};
 use crate::ports::persistence::Credentials;
@@ -17,10 +19,8 @@ impl<S> FilesystemCredentialRepositoryAdapter<S>
 where
     S: ContentStore<Content = Credentials>,
 {
-    pub fn new(persistence_service: S) -> Self {
-        FilesystemCredentialRepositoryAdapter {
-            content_store: persistence_service,
-        }
+    pub fn new(content_store: S) -> Self {
+        FilesystemCredentialRepositoryAdapter { content_store }
     }
 }
 
@@ -92,9 +92,9 @@ mod tests {
     use super::*;
 
     fn under_test(
-        persistence_service: MockContentStore,
+        content_store: MockContentStore,
     ) -> FilesystemCredentialRepositoryAdapter<MockContentStore> {
-        FilesystemCredentialRepositoryAdapter::new(persistence_service)
+        FilesystemCredentialRepositoryAdapter::new(content_store)
     }
 
     #[derive(Debug, Eq, PartialEq)]
