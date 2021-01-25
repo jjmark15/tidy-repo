@@ -9,3 +9,9 @@ updates:
     directory: "/tidy-repo-cli" # Location of package manifests
     schedule:
       interval: "monthly"
+
+  - package-ecosystem: "cargo" # See documentation for possible values
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: "monthly"
+    versioning-strategy: lockfile-only
