@@ -1,2 +1,27 @@
-[workspace]
-members = ["tidy-repo-cli"]
+[package]
+name = "tidy-repo"
+version = "0.4.0"
+authors = ["Josh Jones <ohblonddev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+async-std = { version = "1.7", features = ["attributes"] }
+async-trait = "0.1"
+futures = "0.3"
+http-types = "2.7"
+regex = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.8"
+shellexpand = "2.0"
+structopt = "0.3"
+surf = "2.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+assert_cmd = "1.0"
+assert_fs = "1.0"
+mockall = "0.9"
+mockito = "0.29"
+predicates = "1.0"
+spectral = "0.6"
