@@ -91,10 +91,11 @@ dependencies = [
 
 [[package]]
 name = "assert_cmd"
-version = "1.0.2"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dc1679af9a1ab4bea16f228b05d18f8363f8327b1fa8db00d2760cfafc6b61e"
+checksum = "a88b6bd5df287567ffdf4ddf4d33060048e1068308e5f62d81c6f9824a045a48"
 dependencies = [
+ "bstr",
  "doc-comment",
  "predicates",
  "predicates-core",
@@ -326,7 +327,9 @@ version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "473fc6b38233f9af7baa94fb5852dca389e3d95b8e21c8e3719301462c5d9faf"
 dependencies = [
+ "lazy_static",
  "memchr",
+ "regex-automata",
 ]
 
 [[package]]
@@ -1613,6 +1616,12 @@ dependencies = [
  "regex-syntax",
  "thread_local",
 ]
+
+[[package]]
+name = "regex-automata"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 
 [[package]]
 name = "regex-syntax"
